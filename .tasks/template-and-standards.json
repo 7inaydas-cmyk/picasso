@@ -1,0 +1,54 @@
+{
+  "id": "template-and-standards",
+  "phase": "done",
+  "riskClass": "tooling",
+  "scope": [
+    "template",
+    "docs",
+    ".github",
+    ".tasks",
+    "README.md",
+    "AGENTS.md"
+  ],
+  "pins": [
+    {
+      "command": "npm --prefix template run build",
+      "recordedExit": 254,
+      "evidence": "npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open '/home/excelsior/Desktop/picasso/template/package.json'\nnpm error enoent This is related to npm not being able to find a file.\nnpm error enoent\nnpm error A complete log of this run can be found in: /home/excelsior/.npm/_logs/2026-09-22T06_46_55_883Z-debug-0.log",
+      "at": "2026-09-22T06:46:55.923Z"
+    }
+  ],
+  "created": "2026-09-22T06:46:55.567Z",
+  "history": [
+    {
+      "at": "2026-09-22T06:46:55.567Z",
+      "to": "intake"
+    },
+    {
+      "at": "2026-09-22T06:46:55.771Z",
+      "to": "planned"
+    },
+    {
+      "at": "2026-09-22T06:46:55.800Z",
+      "to": "executing"
+    },
+    {
+      "at": "2026-09-22T06:59:25.329Z",
+      "to": "verified"
+    },
+    {
+      "at": "2026-09-22T06:59:27.147Z",
+      "to": "adversarial"
+    },
+    {
+      "at": "2026-09-22T06:59:30.847Z",
+      "to": "done"
+    }
+  ],
+  "adversarial": {
+    "findings": "docs/tasks/template-and-standards.adversarial.json",
+    "probes": 5,
+    "clean": true,
+    "at": "2026-09-22T06:59:30.847Z"
+  }
+}

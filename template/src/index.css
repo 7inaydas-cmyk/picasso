@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+/* The design-token register. @shadcn/lint's rules enforce against exactly these
+   tokens: no raw palette colors, no arbitrary off-scale values, no inline styles.
+   Change the system here — never at the call site. */
+@theme {
+  --color-canvas: oklch(0.985 0.002 247.839);
+  --color-ink: oklch(0.208 0.042 265.755);
+  --color-muted: oklch(0.554 0.046 257.417);
+  --color-line: oklch(0.922 0.001 286.375);
+  --color-primary: oklch(0.379 0.146 265.522);
+  --color-primary-ink: oklch(0.984 0.003 247.858);
+  --color-accent: oklch(0.714 0.203 305.504);
+}

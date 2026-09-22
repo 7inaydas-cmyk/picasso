@@ -1,0 +1,12 @@
+{
+  "budgets": [
+    {
+      "path": "dist/index.html",
+      "maxBytes": 401
+    },
+    {
+      "path": "dist/assets/*.js",
+      "maxBytes": 225304
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "name": "picasso-template",
+  "private": true,
+  "type": "module",
+  "description": "The picasso default template: Vite + React + TS strict + Tailwind v4 + shadcn/ui, every picasso gate pre-wired. First adapter at the stack seam.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "node tools/lint-budget.mjs --check --linter eslint",
+    "render:report": "node scripts/render-report.mjs",
+    "render:gate": "npm run build && node scripts/render-report.mjs && node tools/console-ratchet.mjs --report reports/console-report.json --baseline baselines/console-baseline.json && node tools/a11y-ratchet.mjs --violations reports/a11y-report.json --baseline baselines/a11y-baseline.json --render-failures reports/render-failures.json --render-baseline baselines/render-baseline.json",
+    "budget:gate": "node tools/size-budget.mjs --budgets budgets.json",
+    "selftest": "node tools/task-state.mjs --self-test && node tools/task-coverage.mjs --self-test && node tools/lint-budget.mjs --self-test && node tools/ratchet.mjs --self-test && node tools/a11y-ratchet.mjs --self-test && node tools/console-ratchet.mjs --self-test && node tools/size-budget.mjs --self-test && node tools/gate-registry.mjs --self-test && node tools/gate-registry.mjs && node tools/task-state.mjs metrics",
+    "doctor": "node tools/task-coverage.mjs --doctor"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@shadcn/lint": "0.1.5",
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/node": "^26.6.2",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "eslint": "^9.30.0",
+    "playwright": "^1.50.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0"
+  }
+}

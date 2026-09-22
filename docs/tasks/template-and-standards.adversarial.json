@@ -1,0 +1,36 @@
+{
+  "task": "template-and-standards",
+  "at": "2026-09-22",
+  "probes": [
+    {
+      "name": "the token gate refuses a raw color, naming the theme's own tokens",
+      "command": "sed 's/text-muted/text-muted bg-pink-500/' src/App.tsx > /tmp/a.tsx && mv /tmp/a.tsx src/App.tsx; npx eslint src/App.tsx --max-warnings 0; (restore)",
+      "exitCode": 1,
+      "evidence": "shadcn/no-raw-colors: '\"bg-pink-500\" uses the raw Tailwind palette and no declared theme color is close to it. Use one of: accent, canvas, ink, line, muted, primary, primary-ink, or declare --color-<name> in src/index.css' — the fence teaches the register"
+    },
+    {
+      "name": "the render gate refuses a live console error (fresh build)",
+      "command": "insert 'console.error(\"canary: boom\")' in App(); npm run render:gate; (restore)",
+      "exitCode": 1,
+      "evidence": "console-ratchet: refused: 1 NEW console error(s) the baseline does not cover: /|canary: boom — the visual seam's deterministic half catching a runtime failure no code-level gate sees"
+    },
+    {
+      "name": "the render script refuses to sweep a server it did not start",
+      "command": "(with vite's default preview port 4173 occupied by another local app) node scripts/render-report.mjs — pre-flight check",
+      "exitCode": 1,
+      "evidence": "render-report: http://localhost:4573 already answers — refusing to sweep a server we did not start (found as a real incident: the first run swept a stranger's app on 4173 and its 39 axe violations failed the gate — the fence judged the WRONG UI, which is worse than no fence; port moved off the default, pre-flight added)"
+    },
+    {
+      "name": "the template registry catches undeclared invocations in its own battery",
+      "command": "npm run selftest (mid-build, before the script invocations were declared)",
+      "exitCode": 1,
+      "evidence": "gate-registry: transport 'battery' carries an undeclared invocation (size-budget --budgets, console-ratchet --report, a11y-ratchet --violations, the self-tests) — four rounds of the drift checker biting its own author until every invocation was declared"
+    },
+    {
+      "name": "everything green after restoration (control)",
+      "command": "npm run build && npm run lint && npm run render:gate && npm run budget:gate && npm run selftest",
+      "exitCode": 0,
+      "evidence": "build ✓, token lint ✓ (cap 0), render:gate ✓ (0 console errors, 0 axe violations, 0 render failures against empty baselines), budgets ✓ (tightened to measured: 401B html, 225304B js sum via wildcard), battery ✓ (23 gates drift-free)"
+    }
+  ]
+}

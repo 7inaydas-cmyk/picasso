@@ -1,0 +1,19 @@
+name: gates
+on: [push, pull_request]
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-fund --no-audit
+      - run: npm run build
+      - run: npx eslint . --max-warnings 0
+      - run: npm exec playwright install chromium --with-deps
+      - run: npm run render:gate
+      - run: npm run budget:gate
+      - run: npm run selftest
+      - run: git config core.hooksPath .githooks
+      - run: node tools/task-coverage.mjs --doctor

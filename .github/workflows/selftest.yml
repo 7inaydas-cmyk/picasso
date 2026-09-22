@@ -15,3 +15,18 @@ jobs:
       # Activate the committed hooks in this clone, then prove the wiring.
       - run: git config core.hooksPath .githooks
       - run: node tools/task-coverage.mjs --doctor
+  template:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # The template is the first adapter at the stack seam; its green run is
+      # its self-test. Vendored picasso tools ride along inside it.
+      - run: npm --prefix template install --no-fund --no-audit
+      - run: npm --prefix template run build
+      - run: npm --prefix template run lint
+      - run: npm --prefix template exec playwright install chromium --with-deps
+      - run: npm --prefix template run render:gate
+      - run: npm --prefix template run selftest

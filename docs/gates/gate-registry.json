@@ -50,6 +50,41 @@
       "checks": "the npm lint script runs the ratchet-capped eslint invocation (the gate's local entry point)"
     },
     {
+      "id": "template-install",
+      "invocation": "npm --prefix template install --no-fund --no-audit",
+      "transports": ["ci"],
+      "phase": "executing",
+      "checks": "the template (first adapter at the stack seam) installs cleanly"
+    },
+    {
+      "id": "template-build",
+      "invocation": "npm --prefix template run build",
+      "transports": ["ci"],
+      "phase": "verified",
+      "checks": "template typechecks (tsc -b strict) and builds for production"
+    },
+    {
+      "id": "template-lint",
+      "invocation": "npm --prefix template run lint",
+      "transports": ["ci"],
+      "phase": "verified",
+      "checks": "template passes the @shadcn/lint token register under its ratchet cap"
+    },
+    {
+      "id": "template-render-gate",
+      "invocation": "npm --prefix template run render:gate",
+      "transports": ["ci"],
+      "phase": "verified",
+      "checks": "template's visual verification seam: headless render + console/a11y/render-failure ratchets all judge clean"
+    },
+    {
+      "id": "template-selftest",
+      "invocation": "npm --prefix template run selftest",
+      "transports": ["ci"],
+      "phase": "executing",
+      "checks": "vendored picasso tools inside the template all self-test clean"
+    },
+    {
       "id": "task-state-metrics",
       "invocation": "node tools/task-state.mjs metrics",
       "transports": ["battery"],

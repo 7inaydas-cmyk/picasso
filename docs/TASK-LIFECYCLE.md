@@ -26,6 +26,31 @@ intake → planned → executing → verified → adversarial → done
 - `pre-push` (`task-coverage --push` + `--doctor`): every commit in the range re-judged;
   an unresolvable push base REFUSES rather than guessing; an unwired clone refuses to push.
 
+## The picasso loop (how agents ride the lifecycle)
+
+The five-stage loop agents actually run, mapped onto the phases — the loop is
+the workflow, the lifecycle is the law:
+
+```
+[Spec / design prompt]
+        │
+1. Plan & Scope ─────────── planned      (scope globs declared per atom: beads
+        │                                  granularity — atoms → molecules →
+2. Scaffold & Tokenize ──── executing     organisms → pages)
+   (template + standards pack)
+        │
+3. Strict generation ────── executing    (TS strict + token fence + generation
+        │                                  constraints)
+4. Visual & runtime ─────── adversarial   (render/console/a11y ratchets = the
+   verification                             deterministic half; screenshot +
+        │  fail → back to 3                MCP judgment = the multimodal half)
+        │  pass
+5. Commit / PR ──────────── fences        (footer + scope + registry + gh)
+```
+
+Grain rule: one atom per scope entry, one story set per atom. Component-tree
+drift then surfaces as scope drift — which the fences already police.
+
 ## The front-end gates
 
 Three ratchet gates ship with picasso; each is deterministic-exit-code and self-tested:
