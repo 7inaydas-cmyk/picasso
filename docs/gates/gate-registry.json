@@ -3,149 +3,220 @@
     {
       "id": "task-coverage-staged",
       "invocation": "node tools/task-coverage.mjs --staged",
-      "transports": ["pre-commit"],
+      "transports": [
+        "pre-commit"
+      ],
       "phase": "executing",
       "checks": "staged code is inside some in-flight task's declared scope"
     },
     {
       "id": "task-coverage-commit-msg",
       "invocation": "node tools/task-coverage.mjs --commit-msg",
-      "transports": ["commit-msg"],
+      "transports": [
+        "commit-msg"
+      ],
       "phase": "executing",
       "checks": "exactly one 'task:' footer naming an in-flight task that covers the staged files"
     },
     {
       "id": "task-coverage-push",
       "invocation": "node tools/task-coverage.mjs --push",
-      "transports": ["pre-push"],
+      "transports": [
+        "pre-push"
+      ],
       "phase": "verified",
       "checks": "every commit in the push range carries a valid footer and in-scope diff"
     },
     {
       "id": "task-coverage-doctor",
       "invocation": "node tools/task-coverage.mjs --doctor",
-      "transports": ["pre-push"],
+      "transports": [
+        "pre-push"
+      ],
       "phase": "verified",
       "checks": "clone wiring: core.hooksPath, executable hooks, registry green"
     },
     {
       "id": "gate-registry-check",
       "invocation": "node tools/gate-registry.mjs",
-      "transports": ["pre-push", "battery"],
+      "transports": [
+        "pre-push",
+        "battery"
+      ],
       "phase": "verified",
       "checks": "every declared gate present in every transport; no undeclared invocations (chain-segment aware)"
     },
     {
       "id": "design-token-lint",
       "invocation": "npx eslint . --max-warnings 0",
-      "transports": ["ci"],
+      "transports": [
+        "ci"
+      ],
       "phase": "verified",
       "checks": "@shadcn/lint design-token rules (no-raw-colors, no-arbitrary-values, no-inline-styles, no-restyle, no-unknown-classes, require-static-classes) under the lint-budget ratchet cap; pinned at 0.1.5, swappable via this one entry"
     },
     {
       "id": "lint-budget-gate-script",
       "invocation": "node tools/lint-budget.mjs --check --linter eslint",
-      "transports": ["battery"],
+      "transports": [
+        "battery"
+      ],
       "phase": "verified",
       "checks": "the npm lint script runs the ratchet-capped eslint invocation (the gate's local entry point)"
     },
     {
       "id": "template-install",
       "invocation": "npm --prefix template install --no-fund --no-audit",
-      "transports": ["ci"],
+      "transports": [
+        "ci"
+      ],
       "phase": "executing",
       "checks": "the template (first adapter at the stack seam) installs cleanly"
     },
     {
-      "id": "template-build",
-      "invocation": "npm --prefix template run build",
-      "transports": ["ci"],
-      "phase": "verified",
-      "checks": "template typechecks (tsc -b strict) and builds for production"
-    },
-    {
       "id": "template-lint",
       "invocation": "npm --prefix template run lint",
-      "transports": ["ci"],
+      "transports": [
+        "ci"
+      ],
       "phase": "verified",
       "checks": "template passes the @shadcn/lint token register under its ratchet cap"
     },
     {
       "id": "template-render-gate",
       "invocation": "npm --prefix template run render:gate",
-      "transports": ["ci"],
+      "transports": [
+        "ci"
+      ],
       "phase": "verified",
       "checks": "template's visual verification seam: headless render + console/a11y/render-failure ratchets all judge clean"
     },
     {
       "id": "template-selftest",
       "invocation": "npm --prefix template run selftest",
-      "transports": ["ci"],
+      "transports": [
+        "ci"
+      ],
       "phase": "executing",
       "checks": "vendored picasso tools inside the template all self-test clean"
     },
     {
       "id": "task-state-metrics",
       "invocation": "node tools/task-state.mjs metrics",
-      "transports": ["battery"],
+      "transports": [
+        "battery"
+      ],
       "phase": "executing",
       "checks": "lifecycle register readable from the battery"
     },
     {
       "id": "task-state-self-test",
       "invocation": "node tools/task-state.mjs --self-test",
-      "transports": ["battery"],
+      "transports": [
+        "battery"
+      ],
       "phase": "executing",
       "checks": "lifecycle refusals discriminate"
     },
     {
       "id": "task-coverage-self-test",
       "invocation": "node tools/task-coverage.mjs --self-test",
-      "transports": ["battery"],
+      "transports": [
+        "battery"
+      ],
       "phase": "executing",
       "checks": "scope matcher and footer law discriminate"
     },
     {
       "id": "gate-registry-self-test",
       "invocation": "node tools/gate-registry.mjs --self-test",
-      "transports": ["battery"],
+      "transports": [
+        "battery"
+      ],
       "phase": "executing",
       "checks": "drift checker discriminates both directions"
     },
     {
       "id": "lint-budget-self-test",
       "invocation": "node tools/lint-budget.mjs --self-test",
-      "transports": ["battery"],
+      "transports": [
+        "battery"
+      ],
       "phase": "executing",
       "checks": "lint ratchet cap only decreases"
     },
     {
       "id": "ratchet-self-test",
       "invocation": "node tools/ratchet.mjs --self-test",
-      "transports": ["battery"],
+      "transports": [
+        "battery"
+      ],
       "phase": "executing",
       "checks": "the shared baseline law (new fails, resolved prunes) at its own seam"
     },
     {
       "id": "console-ratchet-self-test",
       "invocation": "node tools/console-ratchet.mjs --self-test",
-      "transports": ["battery"],
+      "transports": [
+        "battery"
+      ],
       "phase": "executing",
       "checks": "console-error ratchet: new runtime errors fail, resolved prune, route+text identity"
     },
     {
       "id": "a11y-ratchet-self-test",
       "invocation": "node tools/a11y-ratchet.mjs --self-test",
-      "transports": ["battery"],
+      "transports": [
+        "battery"
+      ],
       "phase": "executing",
       "checks": "a11y baseline ratchet: new fails, resolved prunes"
     },
     {
       "id": "size-budget-self-test",
       "invocation": "node tools/size-budget.mjs --self-test",
-      "transports": ["battery"],
+      "transports": [
+        "battery"
+      ],
       "phase": "executing",
       "checks": "bundle budgets: over fails, missing fails, tighten shrinks"
+    },
+    {
+      "id": "template-budget",
+      "invocation": "npm --prefix template run budget:gate",
+      "transports": [
+        "ci"
+      ],
+      "phase": "verified",
+      "checks": "template dist artifacts within wildcard budgets (hashed outputs sum)"
+    },
+    {
+      "id": "template-perf-gate",
+      "invocation": "npm --prefix template run perf:gate",
+      "transports": [
+        "ci"
+      ],
+      "phase": "verified",
+      "checks": "template Lighthouse score floors via error-level assertions"
+    },
+    {
+      "id": "vendor-sync-self-test",
+      "invocation": "node tools/vendor-sync.mjs --self-test",
+      "transports": [
+        "battery"
+      ],
+      "phase": "executing",
+      "checks": "the vendor-drift fence discriminates (missing/drifted/orphan)"
+    },
+    {
+      "id": "vendor-sync-check",
+      "invocation": "node tools/vendor-sync.mjs",
+      "transports": [
+        "battery",
+        "ci"
+      ],
+      "phase": "verified",
+      "checks": "template/tools byte-identical to root tools; VENDOR-PIN records upstream provenance"
     }
   ]
 }

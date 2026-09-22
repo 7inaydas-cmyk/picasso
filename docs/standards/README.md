@@ -7,11 +7,13 @@ determinism allows.
 
 **Layer 1 — fenced (machine-checked; violates = red build):**
 - TypeScript: `strict`, `noUncheckedIndexedAccess`, `verbatimModuleSyntax` —
-  template `tsconfig.json`.
+  template `tsconfig.json` — plus `typescript-eslint` **strictTypeChecked** as
+  an eslint fence — template `eslint.config.mjs`.
 - Design tokens: the six `@shadcn/lint` rules + no-restyle
   `allow: ["layout"]` — template `eslint.config.mjs`.
-- Performance: Lighthouse CI `assert` presets (error-level score floors) and
-  the bundle `budgets.json` ratchet — template CI. (Web Vitals: LCP, CLS, INP.)
+- Performance: Lighthouse CI `assert` with error-level score floors
+  (performance ≥ 0.8, accessibility ≥ 0.9, best-practices ≥ 0.8 — template
+  `perf:gate`, `.lighthouserc.json`) and the bundle `budgets.json` ratchet.
 - Runtime: the console ratchet, a11y ratchet, render-failure ratchet —
   `render:gate`.
 

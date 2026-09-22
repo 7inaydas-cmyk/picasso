@@ -12,6 +12,8 @@ jobs:
       # The design-token gate rides CI: @shadcn/lint rules under the ratchet cap.
       - run: npx eslint . --max-warnings 0
       - run: npm run selftest
+      # The vendor-drift fence rides CI too: template/tools must stay byte-identical.
+      - run: node tools/vendor-sync.mjs
       # Activate the committed hooks in this clone, then prove the wiring.
       - run: git config core.hooksPath .githooks
       - run: node tools/task-coverage.mjs --doctor
@@ -23,10 +25,13 @@ jobs:
         with:
           node-version: 22
       # The template is the first adapter at the stack seam; its green run is
-      # its self-test. Vendored picasso tools ride along inside it.
+      # its self-test. render:gate builds, then every ratchet judges.
       - run: npm --prefix template install --no-fund --no-audit
-      - run: npm --prefix template run build
       - run: npm --prefix template run lint
       - run: npm --prefix template exec playwright install chromium --with-deps
+      - name: resolve chromium for lighthouse
+        run: echo "CHROME_PATH=$(cd template && node -e "console.log(require('playwright').chromium.executablePath())")" >> "$GITHUB_ENV"
       - run: npm --prefix template run render:gate
+      - run: npm --prefix template run budget:gate
+      - run: npm --prefix template run perf:gate
       - run: npm --prefix template run selftest

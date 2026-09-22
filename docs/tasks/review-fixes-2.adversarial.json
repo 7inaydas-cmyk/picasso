@@ -1,0 +1,36 @@
+{
+  "task": "review-fixes-2",
+  "at": "2026-09-22",
+  "probes": [
+    {
+      "name": "the vendor-drift fence refuses an edited vendored tool, printing the working fix",
+      "command": "printf '\\n// drift\\n' >> template/tools/ratchet.mjs; node tools/vendor-sync.mjs; cp tools/ratchet.mjs template/tools/ratchet.mjs",
+      "exitCode": 1,
+      "evidence": "vendor-sync: template/tools/ratchet.mjs DRIFTED from tools/ratchet.mjs — a tool-law edit must re-vendor / fix: cp tools/ratchet.mjs template/tools/ratchet.mjs && node tools/vendor-sync.mjs --stamp (fix verified: re-copy → in sync, pin fcba554)"
+    },
+    {
+      "name": "strictTypeChecked refuses a planted 'as any'",
+      "command": "sed 's/if (!root)/if (!(root as any))/' src/main.tsx; npx eslint src/main.tsx --max-warnings 0; (restore)",
+      "exitCode": 1,
+      "evidence": "@typescript-eslint/no-explicit-any: Unexpected any. Specify a different type — the fence the standards pack claimed now exists and bites; it also caught the template's own real non-null assertion on first wiring (fixed in code, not muted)"
+    },
+    {
+      "name": "the Lighthouse score floors genuinely assert (impossible-floor canary)",
+      "command": "set categories:performance minScore=2 in .lighthouserc.json; CHROME_PATH=<chromium> npm run perf:gate; (restore 0.8)",
+      "exitCode": 1,
+      "evidence": "categories.performance failure for minScore assertion / Assertion failed. Exiting with status code 1 — restored floors exit 0. (Earlier suspicion of a rubber stamp was wrong: assertion-results.json lists failures only, so 0 rows = all passed.)"
+    },
+    {
+      "name": "the render gate's PORT fix command actually works now",
+      "command": "PORT=4599 npm run render:gate",
+      "exitCode": 0,
+      "evidence": "green on an overridden port — the formerly false 'set PORT' fix is real; timeout path now throws through the finally so vite is killed, not orphaned"
+    },
+    {
+      "name": "every gate and battery green after restoration (control)",
+      "command": "npm run lint && npm run build && npm run render:gate && npm run budget:gate && perf:gate && npm run selftest (template) + npm run selftest (root)",
+      "exitCode": 0,
+      "evidence": "lint (token + strictTypeChecked) ✓, build ✓, render:gate ✓, budgets ✓, perf floors ✓, template battery 24 gates ✓, root battery 24 gates + vendor-sync + pin ✓"
+    }
+  ]
+}

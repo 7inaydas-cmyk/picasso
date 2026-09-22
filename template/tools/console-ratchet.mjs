@@ -88,8 +88,8 @@ else {
     die("usage: console-ratchet.mjs --report <file> --baseline <file> [--prune]");
   const report = readJSON(reportFile, "report");
   const baseline = readJSON(baselineFile, "baseline");
-  const shapeError = list => Array.isArray(list) && list.every(e => e && typeof e.route === "string" && typeof e.text === "string");
-  if (!shapeError(report) || !shapeError(baseline))
+  const isValidShape = list => Array.isArray(list) && list.every(e => e && typeof e.route === "string" && typeof e.text === "string");
+  if (!isValidShape(report) || !isValidShape(baseline))
     die("refused: report/baseline must be arrays of {route, text} — the render script's contract");
   const { added, resolved } = judge(report, baseline, identity);
   if (added.length)

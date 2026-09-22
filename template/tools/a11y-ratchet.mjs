@@ -122,7 +122,7 @@ else {
   if (renderFailures) {
     const rfCurrent = readList(renderFailures, "render-failures");
     const rfBase = readList(renderBaseline, "render-baseline");
-    const rf = judge(rfCurrent, rfBase, keyOf);
+    const rf = judgeLists(rfCurrent, rfBase);
     rfAdded = rf.added; rfResolved = rf.resolved;
   }
 

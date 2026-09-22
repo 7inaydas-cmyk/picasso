@@ -2,12 +2,12 @@
   "name": "picasso",
   "private": true,
   "type": "module",
-  "description": "Picasso — the front-end brother of stallion: a task-lifecycle harness for AI coding agents doing UI work.",
+  "description": "Picasso \u2014 the front-end brother of stallion: a task-lifecycle harness for AI coding agents doing UI work.",
   "scripts": {
     "task-state": "node tools/task-state.mjs",
     "task-coverage": "node tools/task-coverage.mjs",
     "lint": "node tools/lint-budget.mjs --check --linter eslint",
-    "selftest": "node tools/task-state.mjs --self-test && node tools/task-coverage.mjs --self-test && node tools/gate-registry.mjs --self-test && node tools/lint-budget.mjs --self-test && node tools/ratchet.mjs --self-test && node tools/a11y-ratchet.mjs --self-test && node tools/console-ratchet.mjs --self-test && node tools/size-budget.mjs --self-test && node tools/gate-registry.mjs && node tools/task-state.mjs metrics",
+    "selftest": "node tools/task-state.mjs --self-test && node tools/task-coverage.mjs --self-test && node tools/gate-registry.mjs --self-test && node tools/lint-budget.mjs --self-test && node tools/ratchet.mjs --self-test && node tools/a11y-ratchet.mjs --self-test && node tools/console-ratchet.mjs --self-test && node tools/size-budget.mjs --self-test && node tools/vendor-sync.mjs --self-test && node tools/gate-registry.mjs && node tools/vendor-sync.mjs && node tools/task-state.mjs metrics",
     "doctor": "node tools/task-coverage.mjs --doctor"
   },
   "devDependencies": {

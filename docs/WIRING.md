@@ -24,9 +24,10 @@ git config picasso.push-base main
 Two halves, deliberately separate — one gate, one meaning:
 
 **The deterministic fence (commit/CI-side): render + console sweep.** The
-template's `scripts/render-report.mjs` drives every route headlessly (playwright,
-pinned devDependency), collecting console errors, page errors, and failed
-requests into `reports/console-report.json`. Gate it:
+template's `scripts/render-report.mjs` drives every route headlessly (playwright —
+hard-pinned in the template's `package.json`, like `@shadcn/lint`; `PORT` env
+overrides the off-default port), collecting console errors, page errors, and
+failed requests into `reports/console-report.json`. Gate it:
 
 ```sh
 node tools/console-ratchet.mjs --report reports/console-report.json \

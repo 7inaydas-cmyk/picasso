@@ -23,7 +23,8 @@ import AxeBuilder from "@axe-core/playwright";
 
 // Off vite's default preview port (4173): a collision there silently sweeps
 // whatever app already owns it — the gate would judge a stranger's UI.
-const PORT = 4573;
+// PORT is overridable so the printed fix command actually works.
+const PORT = Number(process.env.PORT) || 4573;
 const BASE = `http://localhost:${PORT}`;
 const routes = (process.env.ROUTES || "/").split(",").map(r => r.trim()).filter(Boolean);
 
@@ -52,7 +53,9 @@ async function withPreviewServer(fn) {
         if (res.ok) break;
       } catch { /* not up yet */ }
       await new Promise(r => setTimeout(r, 500));
-      if (i === 59) { console.error(`render-report: preview server never answered on ${BASE}`); process.exit(1); }
+      // throw (not exit): the finally below still kills the server, so a
+      // timeout cannot orphan vite and brick the port for the next run.
+      if (i === 59) throw new Error(`preview server never answered on ${BASE}`);
     }
     await fn();
   } finally {
@@ -74,9 +77,15 @@ async function sweep() {
       page.on("pageerror", e => errors.push({ route, text: String(e) }));
       page.on("requestfailed", r => errors.push({ route, text: `request failed: ${r.url()}` }));
       try {
-        await page.goto(BASE + route, { waitUntil: "networkidle", timeout: 15000 });
+        await page.goto(BASE + route, { waitUntil: "load", timeout: 15000 });
+        // networkidle is Playwright-discouraged for SPAs; settle instead on
+        // the root actually carrying content, polled briefly.
         const root = page.locator("#root");
-        const rendered = await root.count() > 0 && (await root.innerHTML()).length > 0;
+        let rendered = false;
+        for (let i = 0; i < 12 && !rendered; i++) {
+          rendered = (await root.count()) > 0 && (await root.innerHTML()).length > 0;
+          if (!rendered) await page.waitForTimeout(250);
+        }
         if (!rendered) renderFailures.push(route);
         const axe = await new AxeBuilder({ page }).analyze();
         for (const v of axe.violations)
@@ -102,4 +111,9 @@ async function sweep() {
 }
 
 buildIfNeeded();
-await withPreviewServer(sweep);
+try {
+  await withPreviewServer(sweep);
+} catch (e) {
+  console.error(`render-report: ${e.message}`);
+  process.exit(1);
+}

@@ -1,0 +1,56 @@
+{
+  "id": "review-fixes-2",
+  "phase": "done",
+  "riskClass": "tooling",
+  "scope": [
+    "tools",
+    "template",
+    "docs",
+    ".github",
+    ".tasks",
+    "package.json",
+    "README.md",
+    "AGENTS.md"
+  ],
+  "pins": [
+    {
+      "command": "node tools/vendor-sync.mjs",
+      "recordedExit": 1,
+      "evidence": "  requireStack: []\n}\n\nNode.js v22.23.2",
+      "at": "2026-09-22T07:26:24.479Z"
+    }
+  ],
+  "created": "2026-09-22T07:26:24.050Z",
+  "history": [
+    {
+      "at": "2026-09-22T07:26:24.050Z",
+      "to": "intake"
+    },
+    {
+      "at": "2026-09-22T07:26:24.392Z",
+      "to": "planned"
+    },
+    {
+      "at": "2026-09-22T07:26:24.422Z",
+      "to": "executing"
+    },
+    {
+      "at": "2026-09-22T07:38:09.316Z",
+      "to": "verified"
+    },
+    {
+      "at": "2026-09-22T07:38:13.195Z",
+      "to": "adversarial"
+    },
+    {
+      "at": "2026-09-22T07:38:17.000Z",
+      "to": "done"
+    }
+  ],
+  "adversarial": {
+    "findings": "docs/tasks/review-fixes-2.adversarial.json",
+    "probes": 5,
+    "clean": true,
+    "at": "2026-09-22T07:38:17.000Z"
+  }
+}
