@@ -1,1 +1,1 @@
-/home/excelsior/Desktop/picasso/plugin/hooks/authoring-gate.mjs
+../../hooks/authoring-gate.mjs

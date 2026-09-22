@@ -1,1 +1,1 @@
-/home/excelsior/Desktop/picasso/plugin/hooks/banner.mjs
+../../hooks/banner.mjs
