@@ -1,0 +1,42 @@
+{
+  "task": "bootstrap-harness",
+  "at": "2026-09-22",
+  "probes": [
+    {
+      "name": "commit-msg fence refuses a footerless commit",
+      "command": "echo '# probe edit' >> README.md; git add README.md; git commit -m 'chore: probe — no footer'",
+      "exitCode": 1,
+      "evidence": "task-coverage: 1 staged file(s) covered — then refused: no 'task: <id>' footer in the message (pre-commit passed; commit-msg refused)"
+    },
+    {
+      "name": "pre-commit fence refuses out-of-scope staged code",
+      "command": "git add app/page.tsx; git commit -m 'feat: rogue page' -m 'task: bootstrap-harness'",
+      "exitCode": 1,
+      "evidence": "task-coverage: refused: staged code outside every declared scope: app/page.tsx (footer was valid; scope was not)"
+    },
+    {
+      "name": "doctor refuses an unwired clone",
+      "command": "git config --unset core.hooksPath; node tools/task-coverage.mjs --doctor",
+      "exitCode": 1,
+      "evidence": "task-coverage: doctor: wiring incomplete — core.hooksPath is '(unset)' — hooks are committed, activation is per clone"
+    },
+    {
+      "name": "a11y ratchet refuses a new violation against an empty baseline",
+      "command": "node tools/a11y-ratchet.mjs --violations cur.json --baseline bas.json (cur carries color-contrast/#x, baseline empty)",
+      "exitCode": 1,
+      "evidence": "a11y-ratchet: refused: 1 NEW accessibility violation(s) the baseline does not cover: color-contrast|#x|serious"
+    },
+    {
+      "name": "lint ratchet refuses raising the cap",
+      "command": "PICASSO_LINT_BUDGET=<cap 5> node tools/lint-budget.mjs --set 9",
+      "exitCode": 1,
+      "evidence": "lint-budget: refused: the cap only decreases (current 5, asked 9)"
+    },
+    {
+      "name": "battery green after all probes (control)",
+      "command": "npm run selftest",
+      "exitCode": 0,
+      "evidence": "all six tool self-tests clean; gate-registry: 12 gate(s), every declaration present in every transport"
+    }
+  ]
+}

@@ -24,3 +24,4 @@ node tools/task-coverage.mjs --doctor # wiring check
 
 Docs: [TASK-LIFECYCLE.md](docs/TASK-LIFECYCLE.md) · [WIRING.md](docs/WIRING.md) ·
 [research basis](docs/research/build-plan.md).
+# probe edit
