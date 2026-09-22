@@ -1,6 +1,6 @@
 {
   "id": "oss-release",
-  "phase": "executing",
+  "phase": "done",
   "riskClass": "tooling",
   "scope": [
     "LICENSE",
@@ -9,7 +9,14 @@
     "docs",
     ".tasks"
   ],
-  "pins": [],
+  "pins": [
+    {
+      "command": "sh -c 'gh api repos/7inaydas-cmyk/picasso/commits/b2e129ee1ffc9885e0bdaf6de99cb2cb5a5e8e22 >/dev/null 2>&1'",
+      "recordedExit": 1,
+      "evidence": "(no output)",
+      "at": "2026-09-22T06:23:55.458Z"
+    }
+  ],
   "created": "2026-09-22T06:22:13.994Z",
   "history": [
     {
@@ -23,6 +30,24 @@
     {
       "at": "2026-09-22T06:22:14.221Z",
       "to": "executing"
+    },
+    {
+      "at": "2026-09-22T06:24:59.557Z",
+      "to": "verified"
+    },
+    {
+      "at": "2026-09-22T06:25:01.340Z",
+      "to": "adversarial"
+    },
+    {
+      "at": "2026-09-22T06:25:03.498Z",
+      "to": "done"
     }
-  ]
+  ],
+  "adversarial": {
+    "findings": "docs/tasks/oss-release.adversarial.json",
+    "probes": 5,
+    "clean": true,
+    "at": "2026-09-22T06:25:03.498Z"
+  }
 }

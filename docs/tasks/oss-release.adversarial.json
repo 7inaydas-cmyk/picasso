@@ -1,0 +1,36 @@
+{
+  "task": "oss-release",
+  "at": "2026-09-22",
+  "probes": [
+    {
+      "name": "a fresh clone is unwired — the doctor refuses until activated",
+      "command": "git clone -q . /tmp/probe-clone && cd /tmp/probe-clone && node tools/task-coverage.mjs --doctor",
+      "exitCode": 1,
+      "evidence": "task-coverage: doctor: wiring incomplete — core.hooksPath is '(unset)' — hooks are committed, activation is per clone / fix: git config core.hooksPath .githooks"
+    },
+    {
+      "name": "activating the hooks cures the doctor (fresh-clone wiring path)",
+      "command": "cd /tmp/probe-clone && git config core.hooksPath .githooks && node tools/task-coverage.mjs --doctor",
+      "exitCode": 0,
+      "evidence": "task-coverage: doctor clean (hooksPath, hook files, registry) — the exact step the CI workflow now runs before doctor"
+    },
+    {
+      "name": "a footerless commit is refused by the CLONE's own commit-msg hook",
+      "command": "cd /tmp/probe-clone && echo x >> README.md && git add README.md; git commit -m 'no footer'",
+      "exitCode": 1,
+      "evidence": "task-coverage: refused: no 'task: <id>' footer in the message's final trailer block"
+    },
+    {
+      "name": "CI green on GitHub Actions for the pushed head (control)",
+      "command": "gh run list --limit 1",
+      "exitCode": 0,
+      "evidence": "completed success 'docs: CI badge and repo link in README' selftest main push 35694650865 — npm ci, npx eslint --max-warnings 0 (the @shadcn/lint gate), the selftest battery, and the wired doctor all green remotely"
+    },
+    {
+      "name": "local battery green, tree clean after probes (control)",
+      "command": "npm run selftest && git status --short | wc -l",
+      "exitCode": 0,
+      "evidence": "all six tool self-tests clean; 14 gates drift-free; only the task register itself modified (committed with this record)"
+    }
+  ]
+}
