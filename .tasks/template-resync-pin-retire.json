@@ -1,0 +1,50 @@
+{
+  "id": "template-resync-pin-retire",
+  "phase": "done",
+  "riskClass": "tooling",
+  "scope": [
+    "template",
+    ".tasks"
+  ],
+  "pins": [
+    {
+      "command": "node tools/vendor-sync.mjs",
+      "recordedExit": 1,
+      "evidence": "vendor-sync: template/tools/task-state.mjs DRIFTED from tools/task-state.mjs — a tool-law edit must re-vendor\n  fix: cp tools/task-state.mjs template/tools/task-state.mjs && node tools/vendor-sync.mjs --stamp",
+      "at": "2026-09-22T10:58:43.777Z"
+    }
+  ],
+  "created": "2026-09-22T10:57:21.543Z",
+  "history": [
+    {
+      "at": "2026-09-22T10:57:21.544Z",
+      "to": "intake"
+    },
+    {
+      "at": "2026-09-22T10:57:21.609Z",
+      "to": "planned"
+    },
+    {
+      "at": "2026-09-22T10:57:21.633Z",
+      "to": "executing"
+    },
+    {
+      "at": "2026-09-22T10:59:30.789Z",
+      "to": "verified"
+    },
+    {
+      "at": "2026-09-22T10:59:32.830Z",
+      "to": "adversarial"
+    },
+    {
+      "at": "2026-09-22T10:59:34.888Z",
+      "to": "done"
+    }
+  ],
+  "adversarial": {
+    "findings": "docs/tasks/template-resync-pin-retire.adversarial.json",
+    "probes": 3,
+    "clean": true,
+    "at": "2026-09-22T10:59:34.888Z"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "task": "template-resync-pin-retire",
+  "at": "2026-09-22",
+  "probes": [
+    {
+      "name": "vendor-sync genuinely refused the drifted vendored copy (the red-check's own subject)",
+      "command": "git restore --source=HEAD --staged --worktree template/VENDOR-PIN template/tools/task-state.mjs; node tools/vendor-sync.mjs",
+      "exitCode": 1,
+      "evidence": "vendor-sync: template/tools/task-state.mjs DRIFTED from tools/task-state.mjs — a tool-law edit must re-vendor / fix: cp + --stamp"
+    },
+    {
+      "name": "the fix (re-copy + restamp) turns the fence green",
+      "command": "cp tools/task-state.mjs template/tools/; node tools/vendor-sync.mjs --stamp; node tools/vendor-sync.mjs",
+      "exitCode": 0,
+      "evidence": "vendor-sync: template/tools in sync; pin 8d10c50"
+    },
+    {
+      "name": "battery clean after resync (control)",
+      "command": "npm run selftest",
+      "exitCode": 0,
+      "evidence": "25 gates drift-free incl. vendor-sync"
+    }
+  ]
+}
