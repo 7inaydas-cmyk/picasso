@@ -1,0 +1,26 @@
+# picasso
+
+The front-end brother of [stallion](../stallion): a task-lifecycle harness for
+AI coding agents doing UI work. Named for Pablo Picasso (P-i-c-a-s-s-o).
+
+- **Lifecycle**: `intake → planned → executing → verified → adversarial → done`,
+  driven by `tools/task-state.mjs`. Code lands only under a task; the
+  `task: <id>` commit footer binds it to a DECLARED, append-only scope.
+- **Fences**: pre-commit / commit-msg / pre-push (`tools/task-coverage.mjs`)
+  refuse out-of-scope code, footerless commits, and unwired clones — with the
+  rule, the evidence, and an exact fix command.
+- **Front-end gates**: the lint ratchet cap (`tools/lint-budget.mjs`), the a11y
+  baseline ratchet (`tools/a11y-ratchet.mjs`, the GSA pattern), and the bundle
+  size ratchet (`tools/size-budget.mjs`). Visual regression stays in the
+  adversarial phase, never a commit fence.
+- **Registry**: every gate invocation declared once in
+  `docs/gates/gate-registry.json`, drift-checked in both directions.
+
+```sh
+git config core.hooksPath .githooks   # per clone
+npm run selftest                      # the whole battery
+node tools/task-coverage.mjs --doctor # wiring check
+```
+
+Docs: [TASK-LIFECYCLE.md](docs/TASK-LIFECYCLE.md) · [WIRING.md](docs/WIRING.md) ·
+[research basis](docs/research/build-plan.md).

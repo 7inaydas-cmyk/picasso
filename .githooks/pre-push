@@ -1,0 +1,7 @@
+#!/bin/sh
+# The push fence: re-judge every commit in the range; an unresolvable base REFUSES.
+node tools/task-coverage.mjs --push || exit 1
+# The gate for the gate: an unwired clone refuses to push until it is wired.
+node tools/task-coverage.mjs --doctor || exit 1
+# The registry check rides the fence: declared gates must actually be wired.
+node tools/gate-registry.mjs || exit 1

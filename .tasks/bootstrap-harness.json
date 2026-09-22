@@ -1,0 +1,31 @@
+{
+  "id": "bootstrap-harness",
+  "phase": "executing",
+  "riskClass": "tooling",
+  "scope": [
+    "tools",
+    ".githooks",
+    "docs",
+    ".tasks",
+    "package.json",
+    "AGENTS.md",
+    "README.md",
+    ".gitignore"
+  ],
+  "pins": [],
+  "created": "2026-09-22T05:27:49.712Z",
+  "history": [
+    {
+      "at": "2026-09-22T05:27:49.712Z",
+      "to": "intake"
+    },
+    {
+      "at": "2026-09-22T05:27:49.960Z",
+      "to": "planned"
+    },
+    {
+      "at": "2026-09-22T05:27:49.994Z",
+      "to": "executing"
+    }
+  ]
+}
