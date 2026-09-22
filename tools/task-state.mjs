@@ -59,8 +59,24 @@ function runShell(command) {
   return { code: r.status ?? 1, out: (r.stdout || "") + (r.stderr || "") };
 }
 
+function cmdPinRetire(args) {
+  const id = args[0];
+  const command = flagValue(args, "--command");
+  const because = flagValue(args, "--because");
+  const t = loadTask(id);
+  if (!command || !because) die('usage: task-state.mjs pin-retire <id> --command "<recorded pin>" --because "<reason>"');
+  const pin = (t.pins || []).find(p => p.command === command);
+  if (!pin) die(`no such pin on '${id}': ${command}`);
+  if (pin.retired) die(`pin already retired`);
+  pin.retired = true;
+  pin.retiredBecause = because;
+  saveTask(t);
+  console.log(`task-state: pin retired on ${id} — ${because}`);
+}
+
 function rerunPins(t) {
   for (const pin of t.pins || []) {
+    if (pin.retired) continue;
     const r = runShell(pin.command);
     if (r.code !== 0) return { ok: false, pin: pin.command, out: r.out };
   }
@@ -120,7 +136,8 @@ function cmdAdvance(t, findingsFile) {
   if (next === "planned" && t.scope.length === 0)
     die(`refused: planned requires DECLARED scope\n  fix: task-state.mjs scope ${t.id} --add "tools/**"`);
   if (next === "verified") {
-    if ((t.pins || []).length === 0)
+    const active = (t.pins || []).filter(p => !p.retired);
+    if (active.length === 0)
       die(`refused: verified needs a red-check pin\n  fix: task-state.mjs red-check ${t.id} --command "<failing check>"`);
     const pins = rerunPins(t);
     if (!pins.ok) die(`refused: pin '${pins.pin}' is not green\n${pins.out.slice(-400)}`);
@@ -238,6 +255,22 @@ function selfTest() {
   ok("done lands on a real adversarial record", call(["advance", "probe", "--findings", join(dir, "good.json")]).code === 0);
   ok("done is terminal", call(["advance", "probe"]).code !== 0);
 
+  // pin-retire: a retired pin stops gating verified (stallion parity).
+  call(["new", "retire-probe", "--risk-class", "tooling"]);
+  call(["scope", "retire-probe", "--add", "tools/**"]);
+  call(["advance", "retire-probe"]);
+  call(["advance", "retire-probe"]);
+  const rflag = join(dir, "retire-flag");
+  ok("red-check records before retire", call(["red-check", "retire-probe", "--command", `test -f ${rflag}`]).code === 0);
+  ok("verified refuses while that pin is red", call(["advance", "retire-probe"]).code !== 0);
+  closeSync(openSync(rflag, "w"));
+  ok("pin-retire retires a recorded pin", call(["pin-retire", "retire-probe", "--command", `test -f ${rflag}`, "--because", "superseded by a re-recorded check"]).code === 0);
+  ok("pin-retire refuses an unknown pin", call(["pin-retire", "retire-probe", "--command", "nope", "--because", "x"]).code !== 0);
+  ok("pin-retire refuses double-retire", call(["pin-retire", "retire-probe", "--command", `test -f ${rflag}`, "--because", "again"]).code !== 0);
+  ok("pin-retire skips retired pins (verified refuses with only a retired pin)", call(["advance", "retire-probe"]).code !== 0);
+  const t2 = JSON.parse(readFileSync(join(dir, "retire-probe.json"), "utf8"));
+  ok("retired pin keeps its evidence and reason", t2.pins[0].retired === true && t2.pins[0].retiredBecause === "superseded by a re-recorded check" && t2.pins[0].evidence.length > 0);
+
   rmSync(dir, { recursive: true, force: true });
   console.log(failures.length ? `task-state: ${failures.length} self-test failure(s)` : "task-state: self-test clean");
   if (failures.length) process.exit(1);
@@ -259,9 +292,10 @@ if (!invokedDirectly) {
     case "new": cmdNew(rest); break;
     case "scope": cmdScope(rest); break;
     case "red-check": cmdRedCheck(rest); break;
+    case "pin-retire": cmdPinRetire(rest); break;
     case "advance": cmdAdvance(loadTask(rest[0]), flagValue(rest, "--findings")); break;
     case "status": cmdStatus(); break;
     case "metrics": cmdMetrics(); break;
-    default: die("usage: task-state.mjs <new|scope|red-check|advance|status|metrics> (--self-test to self-test)");
+    default: die("usage: task-state.mjs <new|scope|red-check|pin-retire|advance|status|metrics> (--self-test to self-test)");
   }
 }

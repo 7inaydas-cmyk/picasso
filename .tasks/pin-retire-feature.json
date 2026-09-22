@@ -1,0 +1,32 @@
+{
+  "id": "pin-retire-feature",
+  "phase": "executing",
+  "riskClass": "tooling",
+  "scope": [
+    "tools",
+    ".tasks"
+  ],
+  "pins": [
+    {
+      "command": "bash -c 'node tools/task-state.mjs --self-test | grep -q \"pin-retire skips retired pins\"'",
+      "recordedExit": 1,
+      "evidence": "(no output)",
+      "at": "2026-09-22T10:53:27.112Z"
+    }
+  ],
+  "created": "2026-09-22T10:53:26.243Z",
+  "history": [
+    {
+      "at": "2026-09-22T10:53:26.244Z",
+      "to": "intake"
+    },
+    {
+      "at": "2026-09-22T10:53:26.319Z",
+      "to": "planned"
+    },
+    {
+      "at": "2026-09-22T10:53:26.345Z",
+      "to": "executing"
+    }
+  ]
+}
