@@ -12,7 +12,14 @@
     "README.md",
     ".gitignore"
   ],
-  "pins": [],
+  "pins": [
+    {
+      "command": "node tools/task-coverage.mjs --push",
+      "recordedExit": 1,
+      "evidence": "task-coverage: refused: cannot read range fatal: no upstream configured for branch 'master'..HEAD\nfatal: invalid object name 'fatal'.",
+      "at": "2026-09-22T05:28:04.193Z"
+    }
+  ],
   "created": "2026-09-22T05:27:49.712Z",
   "history": [
     {

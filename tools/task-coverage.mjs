@@ -135,10 +135,10 @@ function cmdPush() {
 }
 
 function resolveBase() {
-  const configured = git(["config", "--get", "picasso.push-base"]).out.trim();
-  if (configured) return configured;
-  const branch = git(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]).out.trim();
-  if (branch) return branch;
+  const configured = git(["config", "--get", "picasso.push-base"]);
+  if (configured.code === 0 && configured.out.trim()) return configured.out.trim();
+  const upstream = git(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]);
+  if (upstream.code === 0 && upstream.out.trim()) return upstream.out.trim();
   die(`refused: no push base resolvable (no upstream, no picasso.push-base)\n` +
       `rule: an unresolvable base REFUSES rather than guessing\n  fix: git branch --set-upstream-to=origin/<branch> or git config picasso.push-base <ref>`);
 }
