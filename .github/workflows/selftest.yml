@@ -12,4 +12,6 @@ jobs:
       # The design-token gate rides CI: @shadcn/lint rules under the ratchet cap.
       - run: npx eslint . --max-warnings 0
       - run: npm run selftest
+      # Activate the committed hooks in this clone, then prove the wiring.
+      - run: git config core.hooksPath .githooks
       - run: node tools/task-coverage.mjs --doctor
