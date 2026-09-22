@@ -22,6 +22,7 @@ import { existsSync, readFileSync, writeFileSync, mkdtempSync, rmSync } from "no
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { judge } from "./ratchet.mjs";
 
 function die(msg) { console.error(`a11y-ratchet: ${msg}`); process.exit(1); }
 
@@ -32,13 +33,7 @@ export function keyOf(v) {
   return [v.rule, v.selector ?? v.node ?? "", v.impact ?? ""].join("|");
 }
 
-export function judge(current, baseline) {
-  const cur = new Set(current.map(keyOf));
-  const base = new Set(baseline.map(keyOf));
-  const added = [...cur].filter(k => !base.has(k));
-  const resolved = [...base].filter(k => !cur.has(k));
-  return { added, resolved, clean: added.length === 0 && resolved.length === 0 };
-}
+const judgeLists = (current, baseline) => judge(current, baseline, keyOf);
 
 function readList(file, what) {
   if (!existsSync(file)) die(`refused: ${what} file ${file} is missing — an unread report is 'unreachable', never a pass`);
@@ -59,12 +54,12 @@ function selfTest() {
   const v = (rule, sel) => ({ rule, selector: sel, impact: "serious" });
   const base = [v("color-contrast", "#submit"), v("label", "#email")];
 
-  ok("identical report is clean", judge(base, base).clean);
-  const worse = judge([...base, v("aria-valid-attr", "#menu")], base);
+  ok("identical report is clean", judgeLists(base, base).clean);
+  const worse = judgeLists([...base, v("aria-valid-attr", "#menu")], base);
   ok("new violation fails", !worse.clean && worse.added.length === 1 && worse.added[0].startsWith("aria-valid-attr"));
-  const better = judge([base[0]], base);
+  const better = judgeLists([base[0]], base);
   ok("resolved entry demands pruning", !better.clean && better.resolved.length === 1);
-  ok("same rule elsewhere is a different defect", judge([v("label", "#name")], base).added.length === 1);
+  ok("same rule elsewhere is a different defect", judgeLists([v("label", "#name")], base).added.length === 1);
   ok("string entries (render failures) key by themselves", keyOf("stories/foo--bar") === "stories/foo--bar");
 
   // File-level wiring on disk, the way CI consumes it.
@@ -121,13 +116,13 @@ else {
     die("refused: --render-failures and --render-baseline travel together (a parallel ratchet needs both sides)");
   const current = readList(violationsFile, "violations");
   const baseline = readList(baselineFile, "baseline");
-  const { added, resolved } = judge(current, baseline);
+  const { added, resolved } = judgeLists(current, baseline);
 
   let rfAdded = [], rfResolved = [];
   if (renderFailures) {
     const rfCurrent = readList(renderFailures, "render-failures");
     const rfBase = readList(renderBaseline, "render-baseline");
-    const rf = judge(rfCurrent, rfBase);
+    const rf = judge(rfCurrent, rfBase, keyOf);
     rfAdded = rf.added; rfResolved = rf.resolved;
   }
 

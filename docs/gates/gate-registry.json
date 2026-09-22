@@ -85,6 +85,20 @@
       "checks": "lint ratchet cap only decreases"
     },
     {
+      "id": "ratchet-self-test",
+      "invocation": "node tools/ratchet.mjs --self-test",
+      "transports": ["battery"],
+      "phase": "executing",
+      "checks": "the shared baseline law (new fails, resolved prunes) at its own seam"
+    },
+    {
+      "id": "console-ratchet-self-test",
+      "invocation": "node tools/console-ratchet.mjs --self-test",
+      "transports": ["battery"],
+      "phase": "executing",
+      "checks": "console-error ratchet: new runtime errors fail, resolved prune, route+text identity"
+    },
+    {
       "id": "a11y-ratchet-self-test",
       "invocation": "node tools/a11y-ratchet.mjs --self-test",
       "transports": ["battery"],

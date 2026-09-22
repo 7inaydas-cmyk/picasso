@@ -1,0 +1,52 @@
+{
+  "id": "visual-loop-hardening",
+  "phase": "done",
+  "riskClass": "tooling",
+  "scope": [
+    "tools",
+    "docs",
+    ".tasks",
+    "package.json"
+  ],
+  "pins": [
+    {
+      "command": "node tools/console-ratchet.mjs --self-test",
+      "recordedExit": 1,
+      "evidence": "  requireStack: []\n}\n\nNode.js v22.23.2",
+      "at": "2026-09-22T06:43:44.632Z"
+    }
+  ],
+  "created": "2026-09-22T06:43:44.347Z",
+  "history": [
+    {
+      "at": "2026-09-22T06:43:44.348Z",
+      "to": "intake"
+    },
+    {
+      "at": "2026-09-22T06:43:44.527Z",
+      "to": "planned"
+    },
+    {
+      "at": "2026-09-22T06:43:44.564Z",
+      "to": "executing"
+    },
+    {
+      "at": "2026-09-22T06:45:41.540Z",
+      "to": "verified"
+    },
+    {
+      "at": "2026-09-22T06:46:16.511Z",
+      "to": "adversarial"
+    },
+    {
+      "at": "2026-09-22T06:46:18.512Z",
+      "to": "done"
+    }
+  ],
+  "adversarial": {
+    "findings": "docs/tasks/visual-loop-hardening.adversarial.json",
+    "probes": 4,
+    "clean": true,
+    "at": "2026-09-22T06:46:18.512Z"
+  }
+}

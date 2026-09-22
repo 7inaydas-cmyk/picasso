@@ -19,6 +19,33 @@ REFUSE. A local-only clone sets an explicit base:
 git config picasso.push-base main
 ```
 
+## The visual verification seam (blind execution is the unfenced failure mode)
+
+Two halves, deliberately separate — one gate, one meaning:
+
+**The deterministic fence (commit/CI-side): render + console sweep.** The
+template's `scripts/render-report.mjs` drives every route headlessly (playwright,
+pinned devDependency), collecting console errors, page errors, and failed
+requests into `reports/console-report.json`. Gate it:
+
+```sh
+node tools/console-ratchet.mjs --report reports/console-report.json \
+  --baseline baselines/console-baseline.json
+```
+
+New console errors fail the gate (hydration mismatches, broken styling, 404
+assets — failures no code-level gate sees); resolved errors must be `--prune`d.
+The report writer must emit stable text (first line normalized) — that is the
+gate's identity contract.
+
+**The judged pass (adversarial-side): the MCP contract.** Screenshot capture,
+responsive breakpoint walks, and visual judgment are multimodal — inherently
+agent work, never a commit fence (a flaky gate costs more authority than it
+buys). The adversarial pass REQUIRES a browser automation MCP (e.g.
+playwright-mcp) and must record, per probe: route, breakpoint, what the
+screenshot shows, and the judgment. `done` refuses a pass where nothing was
+refused — a screenshot loop that never found anything to question did not look.
+
 ## Adopting the gates in a consuming front-end project
 
 1. Copy `tools/` + `.githooks/` (or vendor picasso at a pinned commit), then

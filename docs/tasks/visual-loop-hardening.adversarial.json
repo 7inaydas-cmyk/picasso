@@ -1,0 +1,30 @@
+{
+  "task": "visual-loop-hardening",
+  "at": "2026-09-22",
+  "probes": [
+    {
+      "name": "a new console error on a route fails the gate",
+      "command": "printf '[{\"route\":\"/\",\"text\":\"hydration mismatch\"}]' > r.json; printf '[{\"route\":\"/\",\"text\":\"hydration mismatch\"},{\"route\":\"/s\",\"text\":\"404 /api/me\"}]' > r2.json; node tools/console-ratchet.mjs --report r2.json --baseline r.json",
+      "exitCode": 1,
+      "evidence": "console-ratchet: refused: 1 NEW console error(s) the baseline does not cover: /s|404 /api/me"
+    },
+    {
+      "name": "a matching report passes (known error tolerated)",
+      "command": "node tools/console-ratchet.mjs --report r.json --baseline r.json-baseline-copy",
+      "exitCode": 0,
+      "evidence": "console-ratchet: clean against baseline (1 known)"
+    },
+    {
+      "name": "a resolved error demands pruning, and --prune cures it",
+      "command": "printf '[{\"route\":\"/\",\"text\":\"x\"}]' > r.json; printf '[{\"route\":\"/\",\"text\":\"x\"},{\"route\":\"/g\",\"text\":\"y\"}]' > b.json; node tools/console-ratchet.mjs --report r.json --baseline b.json; node tools/console-ratchet.mjs --report r.json --baseline b.json --prune",
+      "exitCode": 1,
+      "evidence": "refused: baseline entries no longer reproduce — prune them: /g|y → then --prune exits 0 and rewrites the baseline"
+    },
+    {
+      "name": "the shared law at its seam + whole battery (control)",
+      "command": "npm run selftest",
+      "exitCode": 0,
+      "evidence": "ratchet/a11y/console self-tests all clean — a11y's behavior unchanged through the refactor onto tools/ratchet.mjs; 16 gates drift-free"
+    }
+  ]
+}
