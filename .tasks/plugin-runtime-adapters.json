@@ -1,6 +1,6 @@
 {
   "id": "plugin-runtime-adapters",
-  "phase": "executing",
+  "phase": "done",
   "riskClass": "tooling",
   "scope": [
     "plugin",
@@ -40,6 +40,24 @@
     {
       "at": "2026-09-22T09:14:44.126Z",
       "to": "executing"
+    },
+    {
+      "at": "2026-09-22T11:02:35.496Z",
+      "to": "verified"
+    },
+    {
+      "at": "2026-09-22T11:02:37.488Z",
+      "to": "adversarial"
+    },
+    {
+      "at": "2026-09-22T11:02:56.615Z",
+      "to": "done"
     }
-  ]
+  ],
+  "adversarial": {
+    "findings": "docs/tasks/plugin-runtime-adapters.adversarial.json",
+    "probes": 8,
+    "clean": true,
+    "at": "2026-09-22T11:02:56.615Z"
+  }
 }
