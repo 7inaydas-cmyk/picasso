@@ -107,7 +107,7 @@ function cmdRedCheck(args) {
   console.log(`task-state: pin recorded (exit ${r.code}): ${command}`);
 }
 
-function advanceRules(t, findingsFile) {
+function cmdAdvance(t, findingsFile) {
   const next = PHASES[PHASES.indexOf(t.phase) + 1];
   if (!next) die(`'${t.id}' is already done`);
   if (next === "planned" && t.scope.length === 0)
@@ -231,7 +231,7 @@ switch (cmd) {
   case "new": cmdNew(rest); break;
   case "scope": cmdScope(rest); break;
   case "red-check": cmdRedCheck(rest); break;
-  case "advance": advanceRules(loadTask(rest[0]), flagValue(rest, "--findings")); break;
+  case "advance": cmdAdvance(loadTask(rest[0]), flagValue(rest, "--findings")); break;
   case "status": cmdStatus(); break;
   case "metrics": cmdMetrics(); break;
   default: die("usage: task-state.mjs <new|scope|red-check|advance|status|metrics> (--self-test to self-test)");

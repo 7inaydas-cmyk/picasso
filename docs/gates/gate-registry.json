@@ -33,7 +33,21 @@
       "invocation": "node tools/gate-registry.mjs",
       "transports": ["pre-push", "battery"],
       "phase": "verified",
-      "checks": "every declared gate present in every transport; no undeclared invocations"
+      "checks": "every declared gate present in every transport; no undeclared invocations (chain-segment aware)"
+    },
+    {
+      "id": "design-token-lint",
+      "invocation": "npx eslint . --max-warnings 0",
+      "transports": ["ci"],
+      "phase": "verified",
+      "checks": "@shadcn/lint design-token rules (no-raw-colors, no-arbitrary-values, no-inline-styles, no-restyle, no-unknown-classes, require-static-classes) under the lint-budget ratchet cap; pinned at 0.1.5, swappable via this one entry"
+    },
+    {
+      "id": "lint-budget-gate-script",
+      "invocation": "node tools/lint-budget.mjs --check --linter eslint",
+      "transports": ["battery"],
+      "phase": "verified",
+      "checks": "the npm lint script runs the ratchet-capped eslint invocation (the gate's local entry point)"
     },
     {
       "id": "task-state-metrics",

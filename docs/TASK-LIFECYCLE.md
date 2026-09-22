@@ -31,13 +31,16 @@ intake → planned → executing → verified → adversarial → done
 Three ratchet gates ship with picasso; each is deterministic-exit-code and self-tested:
 
 1. **lint-budget** — `--max-warnings N` cap in `lint-budget.json`; the cap only decreases
-   (`--set` refuses a raise). Wraps ESLint/Oxlint; for Tailwind v4 projects the
-   design-token register is `@shadcn/lint`'s rule set (no-restyle, no-raw-colors,
+   (`--set` refuses a raise). Wraps ESLint or Oxlint (`--check --linter <eslint|oxlint>`);
+   the design-token register is `@shadcn/lint`'s rule set (no-restyle, no-raw-colors,
    no-arbitrary-values, no-inline-styles, no-unknown-classes, require-static-classes)
-   with per-component contracts.
+   with per-component contracts. In picasso itself the gate is declared in the registry's
+   `ci` transport (`.github/workflows/selftest.yml`): `npx eslint . --max-warnings 0`.
 2. **a11y-ratchet** — committed violation baseline (GSA pattern: new violations fail;
-   resolved entries must be `--prune`d; a parallel render-failures ratchet catches
-   stories that fail to render at all).
+   resolved entries must be `--prune`ed; the parallel render-failures ratchet
+   (`--render-failures` + `--render-baseline`) catches stories that fail to render at
+   all). Adoption includes the GSA sanity probe: plant a canary violation once and
+   confirm the gate turns red before trusting its green.
 3. **size-budget** — `budgets.json` maxBytes per built artifact; over budget fails,
    missing artifacts fail, `--tighten` ratchets caps down to measured sizes.
 

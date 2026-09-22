@@ -10,6 +10,10 @@
  *   2. a transport carrying a `node tools/...` invocation the registry does not
  *      declare (an unwired shadow gate — code that looks like enforcement)
  *
+ * The reverse scan splits on shell-chain boundaries: `&&` and `||` end a match,
+ * so a chained battery line is judged segment by segment — an undeclared
+ * invocation hiding mid-chain is caught, not swallowed by the first prefix.
+ *
  * Usage:
  *   gate-registry.mjs            check every declaration against every transport
  *   gate-registry.mjs --self-test
@@ -26,10 +30,14 @@ const TRANSPORTS = {
   "pre-commit": ".githooks/pre-commit",
   "commit-msg": ".githooks/commit-msg",
   "pre-push": ".githooks/pre-push",
+  ci: ".github/workflows/selftest.yml",
   battery: "package.json",
 };
 
 function die(message) { console.error(`gate-registry: ${message}`); process.exit(1); }
+
+// `&` and `|` are excluded from the match so chain operators terminate it.
+const INVOCATION_RE = /node tools\/[a-z-]+\.mjs[^"'`\n&|]*/g;
 
 export function check({ root = ROOT, registryPath = join(root, REGISTRY_PATH), transports = TRANSPORTS } = {}) {
   const problems = [];
@@ -40,6 +48,8 @@ export function check({ root = ROOT, registryPath = join(root, REGISTRY_PATH), t
   if (!Array.isArray(registry.gates) || registry.gates.length === 0)
     return { problems: [`${REGISTRY_PATH} declares no gates`] };
   const seen = new Set();
+  const declared = inv => registry.gates.some(g =>
+    g.invocation === inv || g.invocation.startsWith(inv + " ") || inv.startsWith(g.invocation + " "));
   for (const g of registry.gates) {
     if (!g.id || !g.invocation || !Array.isArray(g.transports) || g.transports.length === 0)
       return { problems: [`gate entry missing {id, invocation, transports}: ${JSON.stringify(g)}`] };
@@ -49,20 +59,21 @@ export function check({ root = ROOT, registryPath = join(root, REGISTRY_PATH), t
       const file = transports[tr];
       if (!file) { problems.push(`gate '${g.id}' names unknown transport '${tr}'`); continue; }
       const path = join(root, file);
-      if (!existsSync(file) && !existsSync(path)) { problems.push(`transport '${tr}' (${file}) is missing`); continue; }
-      const text = readFileSync(existsSync(path) ? path : file, "utf8");
+      if (!existsSync(path)) { problems.push(`transport '${tr}' (${file}) is missing`); continue; }
+      const text = readFileSync(path, "utf8");
       if (!text.includes(g.invocation))
         problems.push(`gate '${g.id}' is missing from transport '${tr}' (${file}) — the invocation text is not there\n  fix: restore the line '${g.invocation}'`);
     }
   }
-  // Reverse direction: any `node tools/...mjs ...` invocation in a transport must be declared.
+  // Reverse direction: every `node tools/...` invocation in a transport (per chain
+  // segment) must be declared — none other.
   for (const [tr, file] of Object.entries(transports)) {
     const path = join(root, file);
     if (!existsSync(path)) continue;
     const text = readFileSync(path, "utf8");
-    for (const m of text.matchAll(/node tools\/[a-z-]+\.mjs[^"'`\n]*/g)) {
-      const found = m[0].trim();
-      if (!registry.gates.some(g => found.startsWith(g.invocation) || g.invocation.startsWith(found)))
+    for (const m of text.matchAll(INVOCATION_RE)) {
+      const found = m[0].trim().replace(/\s+/g, " ");
+      if (!declared(found))
         problems.push(`transport '${tr}' carries an undeclared invocation: '${found}'\n  fix: declare it in ${REGISTRY_PATH} or remove it`);
     }
   }
@@ -79,11 +90,13 @@ function selfTest() {
     mkdirSync(join(root, "docs/gates"), { recursive: true });
     const registry = { gates: [
       { id: "task-coverage-staged", invocation: "node tools/task-coverage.mjs --staged", transports: ["pre-commit"] },
+      { id: "task-state-self-test", invocation: "node tools/task-state.mjs --self-test", transports: ["battery"] },
       { id: "task-state-metrics", invocation: "node tools/task-state.mjs metrics", transports: ["battery"] },
     ] };
     const files = {
       ".githooks/pre-commit": "#!/bin/sh\nnode tools/task-coverage.mjs --staged || exit 1\n",
-      "package.json": JSON.stringify({ scripts: { selftest: "node tools/task-state.mjs metrics" } }),
+      "package.json": JSON.stringify({ scripts: { selftest:
+        "node tools/task-state.mjs --self-test && node tools/task-state.mjs metrics" } }),
     };
     mutate?.(registry, files);
     writeFileSync(join(root, "docs/gates/gate-registry.json"), JSON.stringify(registry));
@@ -94,25 +107,26 @@ function selfTest() {
     return { root, result: check({ root, transports: { "pre-commit": ".githooks/pre-commit", battery: "package.json" } }) };
   };
 
-  const clean = build();
-  ok("clean registry passes", clean.result.problems.length === 0);
-  rmSync(clean.root, { recursive: true, force: true });
-
-  const drift = build((reg, files) => { files[".githooks/pre-commit"] = "#!/bin/sh\n# gate dropped\n"; });
-  ok("missing invocation in transport is drift", drift.result.problems.some(p => p.includes("missing from transport")));
-  rmSync(drift.root, { recursive: true, force: true });
-
-  const shadow = build((reg, files) => { files[".githooks/pre-commit"] += "node tools/task-coverage.mjs --doctor || exit 1\n"; });
-  ok("undeclared invocation in transport is a shadow gate", shadow.result.problems.some(p => p.includes("undeclared invocation")));
-  rmSync(shadow.root, { recursive: true, force: true });
-
-  const dupe = build(reg => { reg.gates.push({ ...reg.gates[0] }); });
-  ok("duplicate gate ids refused", dupe.result.problems.some(p => p.includes("duplicate gate id")));
-  rmSync(dupe.root, { recursive: true, force: true });
-
-  const broken = build((reg, files) => { files["package.json"] = "{ nope"; });
-  ok("empty battery transport still parses as text, missing gate caught", broken.result.problems.length > 0);
-  rmSync(broken.root, { recursive: true, force: true });
+  const cases = [
+    ["clean registry passes", b => b, r => r.problems.length === 0],
+    ["missing invocation in transport is drift", (reg, files) => { files[".githooks/pre-commit"] = "#!/bin/sh\n# gate dropped\n"; }, r => r.problems.some(p => p.includes("missing from transport"))],
+    ["undeclared invocation in transport is a shadow gate", (reg, files) => { files[".githooks/pre-commit"] += "node tools/task-coverage.mjs --doctor || exit 1\n"; }, r => r.problems.some(p => p.includes("undeclared invocation"))],
+    ["an undeclared invocation HIDING MID-CHAIN in the battery is caught", (reg, files) => {
+      files["package.json"] = JSON.stringify({ scripts: { selftest:
+        "node tools/task-state.mjs --self-test && node tools/lint-budget.mjs --set 99 && node tools/task-state.mjs metrics" } });
+    }, r => r.problems.some(p => p.includes("lint-budget.mjs --set 99"))],
+    ["a declared invocation mid-chain is not flagged", (reg, files) => {
+      files["package.json"] = JSON.stringify({ scripts: { selftest:
+        "node tools/task-state.mjs --self-test && node tools/task-state.mjs metrics && true" } });
+    }, r => r.problems.length === 0],
+    ["duplicate gate ids refused", reg => { reg.gates.push({ ...reg.gates[0] }); }, r => r.problems.some(p => p.includes("duplicate gate id"))],
+    ["gate naming an unknown transport is refused", reg => { reg.gates[0].transports = ["nope"]; }, r => r.problems.some(p => p.includes("unknown transport"))],
+  ];
+  for (const [name, mutate, verdict] of cases) {
+    const b = build(mutate);
+    ok(name, verdict(b.result));
+    rmSync(b.root, { recursive: true, force: true });
+  }
 
   console.log(failures.length ? `gate-registry: ${failures.length} self-test failure(s)` : "gate-registry: self-test clean");
   if (failures.length) process.exit(1);

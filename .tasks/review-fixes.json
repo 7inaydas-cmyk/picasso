@@ -1,0 +1,42 @@
+{
+  "id": "review-fixes",
+  "phase": "executing",
+  "riskClass": "tooling",
+  "scope": [
+    "tools",
+    ".githooks",
+    "docs",
+    ".tasks",
+    ".github",
+    "package.json",
+    "package-lock.json",
+    "README.md",
+    "AGENTS.md",
+    "eslint.config.mjs",
+    "lint-budget.json",
+    ".gitignore"
+  ],
+  "pins": [
+    {
+      "command": "sh -c 'printf \"subject line\\n\\nbody text task: bootstrap-harness mid-body\\n\" > /tmp/pc-footer.msg && node tools/task-coverage.mjs --commit-msg /tmp/pc-footer.msg; test $? -ne 0'",
+      "recordedExit": 2,
+      "evidence": "\"subject: 1: Syntax error: Unterminated quoted string",
+      "at": "2026-09-22T05:52:12.855Z"
+    }
+  ],
+  "created": "2026-09-22T05:52:02.188Z",
+  "history": [
+    {
+      "at": "2026-09-22T05:52:02.188Z",
+      "to": "intake"
+    },
+    {
+      "at": "2026-09-22T05:52:02.552Z",
+      "to": "planned"
+    },
+    {
+      "at": "2026-09-22T05:52:02.579Z",
+      "to": "executing"
+    }
+  ]
+}

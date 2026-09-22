@@ -10,7 +10,7 @@
  * Usage:
  *   lint-budget.mjs --show
  *   lint-budget.mjs --set <N>            (refuses N > current cap)
- *   lint-budget.mjs --check -- <eslint args...>   (runs eslint with the cap; --self-testable)
+ *   lint-budget.mjs --check [--linter eslint|oxlint] -- <linter args...>
  *   lint-budget.mjs --self-test
  */
 
@@ -56,6 +56,20 @@ function selfTest() {
   try { loadBudget(file); } catch { malformed = true; }
   ok("negative cap is malformed", malformed);
 
+  // The --linter flag validates before anything spawns: probe against a missing
+  // budget file so the oxlint path dies at the cap check, never at a network npx.
+  const SELF = new URL(import.meta.url).pathname;
+  const probe = f => {
+    const r = spawnSync("node", [SELF, "--check", "--linter", f], { encoding: "utf8",
+      env: { ...process.env, PICASSO_LINT_BUDGET: join(dir, "no-cap.json") } });
+    return { code: r.status, out: (r.stdout || "") + (r.stderr || "") };
+  };
+  const bogus = probe("prettier");
+  ok("--check refuses an unknown linter before spawning", bogus.code !== 0 && bogus.out.includes("eslint or oxlint"));
+  const ox = probe("oxlint");
+  ok("--check accepts the documented oxlint path (dies later at the cap, not at validation)",
+    ox.code !== 0 && ox.out.includes("no cap recorded"));
+
   rmSync(dir, { recursive: true, force: true });
   console.log(failures.length ? `lint-budget: ${failures.length} self-test failure(s)` : "lint-budget: self-test clean");
   if (failures.length) process.exit(1);
@@ -73,9 +87,12 @@ else if (args.includes("--show")) {
   try { const r = setBudget(BUDGET_FILE, n); console.log(`lint-budget: cap ${r.current ?? "unset"} → ${r.next}`); }
   catch (e) { die(e.message); }
 } else if (args.includes("--check")) {
+  const linter = args[args.indexOf("--linter") + 1] || "eslint";
+  if (!["eslint", "oxlint"].includes(linter))
+    die(`--linter must be eslint or oxlint (got '${linter}') — both support --max-warnings`);
   const cap = loadBudget(BUDGET_FILE);
   if (cap === null) die(`refused: no cap recorded at ${BUDGET_FILE}\n  fix: lint-budget.mjs --set <current warning count>`);
-  const rest = args.slice(args.indexOf("--check") + 1);
-  const r = spawnSync("npx", ["eslint", ".", "--max-warnings", String(cap), ...rest], { stdio: "inherit" });
+  const rest = args.slice(args.indexOf("--check") + 1).filter((a, i, all) => !(a === "--linter" || all[i - 1] === "--linter"));
+  const r = spawnSync("npx", [linter, ".", "--max-warnings", String(cap), ...rest], { stdio: "inherit" });
   process.exit(r.status ?? 1);
-} else die("usage: lint-budget.mjs --show | --set <N> | --check -- <eslint args> | --self-test");
+} else die("usage: lint-budget.mjs --show | --set <N> | --check [--linter eslint|oxlint] -- <linter args> | --self-test");

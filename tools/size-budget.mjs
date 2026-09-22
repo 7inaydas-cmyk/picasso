@@ -15,8 +15,9 @@
  */
 
 import { existsSync, readFileSync, writeFileSync, mkdtempSync, rmSync, statSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
-import { join, dirname } from "node:path";
+import { join } from "node:path";
 
 function die(msg) { console.error(`size-budget: ${msg}`); process.exit(1); }
 
@@ -70,8 +71,8 @@ function selfTest() {
   if (failures.length) process.exit(1);
 }
 
-import { spawnSync } from "node:child_process";
 function spawnSyncNode(argv) { return spawnSync("node", argv, { encoding: "utf8" }); }
+
 
 const args = process.argv.slice(2);
 if (args.includes("--self-test")) selfTest();

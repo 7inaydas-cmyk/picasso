@@ -23,13 +23,17 @@ git config picasso.push-base main
 
 1. Copy `tools/` + `.githooks/` (or vendor picasso at a pinned commit), then
    `git config core.hooksPath .githooks`.
-2. Lint: install ESLint ≥9.30 (or Oxlint ≥1.80) + `@shadcn/lint`; configure rules and
-   contracts; record the current warning count:
+2. Lint: install ESLint ≥9.30 (or Oxlint ≥1.80) + `@shadcn/lint` (pinned; picasso
+   pins 0.1.5); configure rules and contracts; record the current warning count:
    `node tools/lint-budget.mjs --set <count>`; run CI with
-   `node tools/lint-budget.mjs --check`.
+   `node tools/lint-budget.mjs --check` (add `--linter oxlint` for the Oxlint path).
 3. A11y: produce an axe report (Storybook a11y at `error` severity, or
    `@axe-core/playwright` sweeping every story); commit the initial baseline; gate CI
-   with `node tools/a11y-ratchet.mjs --violations report.json --baseline baseline.json`.
+   with `node tools/a11y-ratchet.mjs --violations report.json --baseline baseline.json`
+   — plus `--render-failures`/`--render-baseline` to ratchet stories that fail to
+   render at all. **Sanity probe (GSA pattern): before trusting a green run, plant one
+   canary violation and confirm the gate FAILS** — a green that cannot turn red is not
+   a gate.
 4. Bundle budgets: declare `{ budgets: [{ path, maxBytes }] }`; gate the build with
    `node tools/size-budget.mjs --budgets budgets.json`.
 5. Typecheck/build/unit/e2e: wire directly in CI and declare them in
