@@ -47,6 +47,29 @@ playwright-mcp) and must record, per probe: route, breakpoint, what the
 screenshot shows, and the judgment. `done` refuses a pass where nothing was
 refused — a screenshot loop that never found anything to question did not look.
 
+## The enforcement plugin (invoking picasso in the session)
+
+`plugin/` is the stallion-pattern transport against instruction decay: a
+PreToolUse hook that denies the edit itself, judged by the repo's OWN vendored
+harness (the law — `PHASES`, `authorizingPhases`, `pathMatches` — is imported
+from `tools/task-coverage.mjs`, never copied).
+
+The front-end-only claim is enforced by **declared jurisdiction**: the repo's
+`picasso.json` (`{ "jurisdiction": ["src/**", "index.html"] }` — template ships
+defaults) bounds everything the plugin may refuse.
+
+- Inside jurisdiction: front-end edits require an in-flight task
+  (`executing`–`adversarial`; `done` authorizes nothing) whose scope covers the
+  file, else exit 2 with rule + evidence + exact fix.
+- Outside jurisdiction, no `picasso.json`, or no vendored harness: **inert** —
+  the plugin never governs work that is not front-end work.
+- Banner (SessionStart/UserPromptSubmit): live front-end task state every turn;
+  fails open.
+
+Install: copy or symlink `plugin/` into your plugins location. Verify:
+`node plugin/lib/gate-law.mjs --self-test`, then a live payload probe (see
+`plugin/README.md`).
+
 ## Adopting the gates in a consuming front-end project
 
 1. Copy `tools/` + `.githooks/` (or vendor picasso at a pinned commit), then

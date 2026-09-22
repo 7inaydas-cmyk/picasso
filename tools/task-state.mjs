@@ -26,8 +26,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, mkdtempSync, rmSync
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { PHASES } from "./task-coverage.mjs";
 
-const PHASES = ["intake", "planned", "executing", "verified", "adversarial", "done"];
 const RISK_CLASSES = ["ui-runtime", "styles", "tooling", "docs"];
 // Phases under which code may land (the commit footer's task must be in one of these).
 const CODE_PHASES = ["executing", "verified", "adversarial", "done"];
@@ -243,14 +243,25 @@ function selfTest() {
   if (failures.length) process.exit(1);
 }
 
-const [cmd, ...rest] = process.argv.slice(2);
-switch (cmd) {
-  case "--self-test": selfTest(); break;
-  case "new": cmdNew(rest); break;
-  case "scope": cmdScope(rest); break;
-  case "red-check": cmdRedCheck(rest); break;
-  case "advance": cmdAdvance(loadTask(rest[0]), flagValue(rest, "--findings")); break;
-  case "status": cmdStatus(); break;
-  case "metrics": cmdMetrics(); break;
-  default: die("usage: task-state.mjs <new|scope|red-check|advance|status|metrics> (--self-test to self-test)");
+// Import-safe (task-coverage's law is imported above): dispatch only as entry point.
+import { realpathSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+const invokedDirectly = process.argv[1] && (() => {
+  try { return pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url; }
+  catch { return false; }
+})();
+if (!invokedDirectly) {
+  // imported for the law — dispatch nothing
+} else {
+  const [cmd, ...rest] = process.argv.slice(2);
+  switch (cmd) {
+    case "--self-test": selfTest(); break;
+    case "new": cmdNew(rest); break;
+    case "scope": cmdScope(rest); break;
+    case "red-check": cmdRedCheck(rest); break;
+    case "advance": cmdAdvance(loadTask(rest[0]), flagValue(rest, "--findings")); break;
+    case "status": cmdStatus(); break;
+    case "metrics": cmdMetrics(); break;
+    default: die("usage: task-state.mjs <new|scope|red-check|advance|status|metrics> (--self-test to self-test)");
+  }
 }

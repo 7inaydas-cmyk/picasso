@@ -17,5 +17,8 @@ node tools/task-coverage.mjs --doctor
 
 Baselines start empty in `baselines/` — only NEW findings fail; resolved ones
 must be pruned. Read-first list: `docs/context-manifest.md`. Lifecycle law:
-`AGENTS.md`. The tools in `tools/` are vendored from
-[picasso](https://github.com/7inaydas-cmyk/picasso) at a pinned upstream commit.
+`AGENTS.md`. `picasso.json` declares this repo's front-end jurisdiction — the
+surface the [picasso enforcement plugin](../plugin/README.md) governs. The tools
+in `tools/` are vendored from
+[picasso](https://github.com/7inaydas-cmyk/picasso) at a pinned upstream commit
+(see `VENDOR-PIN`).

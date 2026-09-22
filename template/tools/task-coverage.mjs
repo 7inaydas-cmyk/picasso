@@ -23,7 +23,16 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
-const CODE_PHASES = ["executing", "verified", "adversarial", "done"];
+// The lifecycle law, stated here once and imported by task-state AND the
+// enforcement plugin — never re-typed.
+export const PHASES = ["intake", "planned", "executing", "verified", "adversarial", "done"];
+// The window in which code may LAND (commit fence allows done tasks' scope).
+export const CODE_PHASES = ["executing", "verified", "adversarial", "done"];
+// The window that AUTHORIZES new edits (authoring gate): done is excluded —
+// a finished task does not authorize new code.
+export function authorizingPhases(phases = PHASES) {
+  return phases.slice(phases.indexOf("executing"), phases.indexOf("done"));
+}
 
 function die(msg) { console.error(`task-coverage: ${msg}`); process.exit(1); }
 
@@ -205,8 +214,18 @@ function selfTest() {
   if (failures.length) process.exit(1);
 }
 
+// Import-safe: the law exports above are loadable by the enforcement plugin;
+// the CLI dispatch below runs only when this file IS the entry point.
+import { realpathSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+const invokedDirectly = process.argv[1] && (() => {
+  try { return pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url; }
+  catch { return false; }
+})();
 const args = process.argv.slice(2);
-if (args.includes("--self-test")) selfTest();
+if (!invokedDirectly) {
+  // imported for the law — dispatch nothing
+} else if (args.includes("--self-test")) selfTest();
 else if (args.includes("--staged")) cmdStaged();
 else if (args.includes("--commit-msg")) cmdCommitMsg(args[args.indexOf("--commit-msg") + 1]);
 else if (args.includes("--push") || args.length === 0) cmdPush();

@@ -1,0 +1,48 @@
+{
+  "task": "plugin-authoring-gate",
+  "at": "2026-09-22",
+  "probes": [
+    {
+      "name": "in-jurisdiction edit with no in-flight task is DENIED (exit 2) with a working fix",
+      "command": "echo '{\"tool_name\":\"Edit\",\"cwd\":\"<template>\",\"tool_input\":{\"file_path\":\"<template>/src/App.tsx\"}}' | node plugin/hooks/authoring-gate.mjs",
+      "exitCode": 2,
+      "evidence": "picasso authoring-gate: the edit targets src/App.tsx, inside this repo's declared front-end jurisdiction, and no in-flight task covers it + fix: node tools/task-state.mjs new <id> --risk-class ui-runtime && scope && advance twice"
+    },
+    {
+      "name": "the same edit under an in-flight covering task is ALLOWED (exit 0)",
+      "command": "add .tasks/probe-ui.json (executing, scope src/**); same payload; rm",
+      "exitCode": 0,
+      "evidence": "picasso authoring-gate: src/App.tsx is covered by probe-ui"
+    },
+    {
+      "name": "out-of-jurisdiction edit passes untouched (backend files never spoken to)",
+      "command": "same payload with file_path=<template>/README.md",
+      "exitCode": 0,
+      "evidence": "picasso authoring-gate: README.md is outside the declared front-end jurisdiction"
+    },
+    {
+      "name": "a repo without a picasso harness is INERT (stallion's fail-closed rule deliberately not inherited)",
+      "command": "cd /tmp/no-harness; same payload shape",
+      "exitCode": 0,
+      "evidence": "picasso authoring-gate: no picasso harness here; not this plugin's claim"
+    },
+    {
+      "name": "a done-phase covering task authorizes NOTHING (the authorizing window excludes done)",
+      "command": "add .tasks/probe.json (phase done, scope src/**); same payload; rm",
+      "exitCode": 2,
+      "evidence": "picasso authoring-gate: no in-flight task covers it — the commit fence's CODE_PHASES (which includes done) and the authoring window are different laws, stated once in tools/task-coverage.mjs (PHASES + authorizingPhases) and imported by both"
+    },
+    {
+      "name": "banner arms with jurisdiction, states honestly when nothing is in flight, fails open",
+      "command": "node plugin/hooks/banner.mjs (in template; then in /tmp/no-harness)",
+      "exitCode": 0,
+      "evidence": "picasso: front-end harness armed (jurisdiction: src/**, index.html) + no in-flight front-end task warning; bare dir → exit 0 silent"
+    },
+    {
+      "name": "both batteries + vendor-sync clean after the law move (control)",
+      "command": "npm run selftest (root, incl. gate-law matrix 13 checks + vendor-sync pin) and template selftest",
+      "exitCode": 0,
+      "evidence": "root: 25 gates drift-free, pin 56da9e2, PHASES now stated once in task-coverage and imported by task-state; template battery green on re-vendored copies"
+    }
+  ]
+}

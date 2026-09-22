@@ -217,6 +217,15 @@
       ],
       "phase": "verified",
       "checks": "template/tools byte-identical to root tools; VENDOR-PIN records upstream provenance"
+    },
+    {
+      "id": "gate-law-self-test",
+      "invocation": "node plugin/lib/gate-law.mjs --self-test",
+      "transports": [
+        "battery"
+      ],
+      "phase": "executing",
+      "checks": "the enforcement plugin's deny/allow matrix (jurisdiction, authorizing window, scope cover) discriminates"
     }
   ]
 }

@@ -1,0 +1,56 @@
+{
+  "id": "plugin-authoring-gate",
+  "phase": "done",
+  "riskClass": "tooling",
+  "scope": [
+    "plugin",
+    "tools",
+    "template",
+    "docs",
+    ".github",
+    ".tasks",
+    "package.json",
+    "README.md"
+  ],
+  "pins": [
+    {
+      "command": "node plugin/lib/gate-law.mjs --self-test",
+      "recordedExit": 1,
+      "evidence": "  requireStack: []\n}\n\nNode.js v22.23.2",
+      "at": "2026-09-22T08:48:39.192Z"
+    }
+  ],
+  "created": "2026-09-22T08:48:38.905Z",
+  "history": [
+    {
+      "at": "2026-09-22T08:48:38.905Z",
+      "to": "intake"
+    },
+    {
+      "at": "2026-09-22T08:48:39.121Z",
+      "to": "planned"
+    },
+    {
+      "at": "2026-09-22T08:48:39.145Z",
+      "to": "executing"
+    },
+    {
+      "at": "2026-09-22T08:57:37.306Z",
+      "to": "verified"
+    },
+    {
+      "at": "2026-09-22T08:57:39.069Z",
+      "to": "adversarial"
+    },
+    {
+      "at": "2026-09-22T08:57:40.947Z",
+      "to": "done"
+    }
+  ],
+  "adversarial": {
+    "findings": "docs/tasks/plugin-authoring-gate.adversarial.json",
+    "probes": 7,
+    "clean": true,
+    "at": "2026-09-22T08:57:40.947Z"
+  }
+}

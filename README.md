@@ -16,6 +16,10 @@ Picasso (P-i-c-a-s-s-o).
   baseline ratchet (`tools/a11y-ratchet.mjs`, the GSA pattern), and the bundle
   size ratchet (`tools/size-budget.mjs`). Visual regression stays in the
   adversarial phase, never a commit fence.
+- **Enforcement plugin**: [`plugin/`](plugin/) — a PreToolUse hook that denies
+  front-end edits outside an in-flight task, judged by the repo's own vendored
+  harness. Governed by the repo's declared jurisdiction (`picasso.json`);
+  inert everywhere else.
 - **Registry**: every gate invocation declared once in
   `docs/gates/gate-registry.json`, drift-checked in both directions.
 - **Template**: [`template/`](template/) — Vite + React + TS strict + Tailwind v4 +
