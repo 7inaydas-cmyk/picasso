@@ -1,0 +1,52 @@
+{
+  "id": "plugin-skill",
+  "phase": "done",
+  "riskClass": "tooling",
+  "scope": [
+    "plugin",
+    ".tasks",
+    "docs",
+    "README.md"
+  ],
+  "pins": [
+    {
+      "command": "bash -c 'node /opt/ZCode/resources/glm/zcode.cjs plugins list 2>/dev/null | grep -A2 \"picasso-enforcement@inline\" | grep -q \"skills: 1\"'",
+      "recordedExit": 1,
+      "evidence": "(no output)",
+      "at": "2026-09-22T17:54:36.075Z"
+    }
+  ],
+  "created": "2026-09-22T17:54:34.987Z",
+  "history": [
+    {
+      "at": "2026-09-22T17:54:34.987Z",
+      "to": "intake"
+    },
+    {
+      "at": "2026-09-22T17:54:35.118Z",
+      "to": "planned"
+    },
+    {
+      "at": "2026-09-22T17:54:35.144Z",
+      "to": "executing"
+    },
+    {
+      "at": "2026-09-22T17:56:20.640Z",
+      "to": "verified"
+    },
+    {
+      "at": "2026-09-22T17:56:22.842Z",
+      "to": "adversarial"
+    },
+    {
+      "at": "2026-09-22T17:56:25.851Z",
+      "to": "done"
+    }
+  ],
+  "adversarial": {
+    "findings": "docs/tasks/plugin-skill.adversarial.json",
+    "probes": 4,
+    "clean": true,
+    "at": "2026-09-22T17:56:25.851Z"
+  }
+}

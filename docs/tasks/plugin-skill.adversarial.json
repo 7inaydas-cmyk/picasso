@@ -1,0 +1,30 @@
+{
+  "task": "plugin-skill",
+  "at": "2026-09-22",
+  "probes": [
+    {
+      "name": "the loader itself reported the gap (the red-check's subject)",
+      "command": "node /opt/ZCode/resources/glm/zcode.cjs plugins list | grep -A2 picasso-enforcement@inline",
+      "exitCode": 1,
+      "evidence": "recorded red-check: the skills:1 grep failed because the loader showed 'skills: 0, commands: 0, hooks: 3' — picasso contributed no skills, so nothing appeared in any skill surface"
+    },
+    {
+      "name": "after the skill lands, the same loader reports it",
+      "command": "node /opt/ZCode/resources/glm/zcode.cjs plugins list | grep -A2 picasso-enforcement@inline",
+      "exitCode": 0,
+      "evidence": "picasso-enforcement@inline [enabled] — skills: 1, commands: 0, hooks: 3, mcp: none (root: /home/excelsior/Desktop/picasso/plugin)"
+    },
+    {
+      "name": "Claude Code parity without a second copy",
+      "command": "ln -sfn ../skills plugin/claude-code-persistent/skills; ls -la plugin/claude-code-persistent/skills",
+      "exitCode": 0,
+      "evidence": "claude-code-persistent/skills -> ../skills (same zero-drift symlink pattern as its hooks/lib); manifest .zcode-plugin/plugin.json gains skills: 'skills'"
+    },
+    {
+      "name": "batteries clean (control)",
+      "command": "npm run selftest",
+      "exitCode": 0,
+      "evidence": "25 gates drift-free incl. gate-law matrix and vendor-sync"
+    }
+  ]
+}
