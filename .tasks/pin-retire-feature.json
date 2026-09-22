@@ -1,6 +1,6 @@
 {
   "id": "pin-retire-feature",
-  "phase": "executing",
+  "phase": "done",
   "riskClass": "tooling",
   "scope": [
     "tools",
@@ -27,6 +27,24 @@
     {
       "at": "2026-09-22T10:53:26.345Z",
       "to": "executing"
+    },
+    {
+      "at": "2026-09-22T11:01:24.865Z",
+      "to": "verified"
+    },
+    {
+      "at": "2026-09-22T11:01:26.884Z",
+      "to": "adversarial"
+    },
+    {
+      "at": "2026-09-22T11:01:29.871Z",
+      "to": "done"
     }
-  ]
+  ],
+  "adversarial": {
+    "findings": ".tasks/pin-retire-feature.adversarial.json",
+    "probes": 4,
+    "clean": true,
+    "at": "2026-09-22T11:01:29.870Z"
+  }
 }
