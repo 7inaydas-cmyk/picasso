@@ -18,6 +18,10 @@ Picasso (P-i-c-a-s-s-o).
   adversarial phase, never a commit fence.
 - **Registry**: every gate invocation declared once in
   `docs/gates/gate-registry.json`, drift-checked in both directions.
+- **Template**: [`template/`](template/) — Vite + React + TS strict + Tailwind v4 +
+  shadcn/ui with every gate pre-wired, including the visual verification seam
+  (headless render + console/a11y/render-failure ratchets) and the
+  [standards pack](docs/standards/README.md) (fenced vs guidance layers).
 
 ```sh
 git config core.hooksPath .githooks   # per clone
