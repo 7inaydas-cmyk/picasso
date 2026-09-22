@@ -1,7 +1,10 @@
 # picasso
 
-The front-end brother of [stallion](../stallion): a task-lifecycle harness for
-AI coding agents doing UI work. Named for Pablo Picasso (P-i-c-a-s-s-o).
+[![selftest](https://github.com/7inaydas-cmyk/picasso/actions/workflows/selftest.yml/badge.svg)](https://github.com/7inaydas-cmyk/picasso/actions/workflows/selftest.yml)
+
+The front-end brother of [stallion](https://github.com/7inaydas-cmyk/stallion): a
+task-lifecycle harness for AI coding agents doing UI work. Named for Pablo
+Picasso (P-i-c-a-s-s-o).
 
 - **Lifecycle**: `intake → planned → executing → verified → adversarial → done`,
   driven by `tools/task-state.mjs`. Code lands only under a task; the
