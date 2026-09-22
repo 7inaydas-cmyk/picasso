@@ -1,0 +1,54 @@
+{
+  "task": "review-fixes",
+  "at": "2026-09-22",
+  "probes": [
+    {
+      "name": "commit-msg fence refuses a footerless commit",
+      "command": "echo '# probe' >> README.md && git add README.md; git commit -m 'chore: probe — no footer'; git reset -q && git checkout -q -- README.md",
+      "exitCode": 1,
+      "evidence": "task-coverage: refused: no 'task: <id>' footer in the message's final trailer block (+ rule and fix lines)"
+    },
+    {
+      "name": "pre-commit fence refuses out-of-scope staged code",
+      "command": "mkdir -p app && echo 'export default () => null' > app/page.tsx && git add app/page.tsx; git commit -m 'feat: rogue' -m 'task: review-fixes'; git reset -q; rm -rf app",
+      "exitCode": 1,
+      "evidence": "task-coverage: refused: staged code outside every declared scope: app/page.tsx"
+    },
+    {
+      "name": "a task: line mid-body does not bind (review fix regression probe)",
+      "command": "printf 'subject\\n\\nbody task: review-fixes mid-body\\n' > /tmp/pr/p3.msg && node tools/task-coverage.mjs --commit-msg /tmp/pr/p3.msg",
+      "exitCode": 1,
+      "evidence": "task-coverage: refused: no 'task: <id>' footer in the message's final trailer block — 'a task: line mid-body does not bind'"
+    },
+    {
+      "name": "push fence refuses cleanly on an unknown task (no ENOENT crash — review fix regression probe)",
+      "command": "BASE=$(git commit-tree $(git hash-object -t tree /dev/null) -m base) && git config picasso.push-base $BASE; PICASSO_TASKS_DIR=/tmp/pr/empty-tasks node tools/task-coverage.mjs --push; git config picasso.push-base master",
+      "exitCode": 1,
+      "evidence": "task-coverage: refused: commit 12030b4: task 'review-fixes' has no register file at all / fix: open it — zero stack frames in the output"
+    },
+    {
+      "name": "render-failures ratchet refuses a newly-unrendered story (new gate)",
+      "command": "node tools/a11y-ratchet.mjs --violations /tmp/pr/v.json --baseline /tmp/pr/b.json --render-failures /tmp/pr/rf.json --render-baseline /tmp/pr/rb.json",
+      "exitCode": 1,
+      "evidence": "a11y-ratchet: refused: 1 story/story-variant(s) that FAILED TO RENDER and are not in the render baseline: stories/new--story"
+    },
+    {
+      "name": "the design-token lint gate turns red on a canary violation (@shadcn/lint sanity probe)",
+      "command": "printf 'export function Canary() {\\n  return <button className=\"bg-pink-500\" />;\\n}\\n' > canary.jsx; npx eslint canary.jsx --max-warnings 0; rm canary.jsx",
+      "exitCode": 1,
+      "evidence": "shadcn/no-raw-colors: '\"bg-pink-500\" uses the raw Tailwind palette. Use a theme token, or define one for this color'"
+    },
+    {
+      "name": "registry catches an undeclared invocation hiding mid-chain in the battery (review fix regression probe)",
+      "command": "python3 (inject 'node tools/lint-budget.mjs --set 99' mid-selftest-chain into package.json); node tools/gate-registry.mjs; git checkout -q -- package.json",
+      "exitCode": 1,
+      "evidence": "gate-registry: transport 'battery' carries an undeclared invocation: 'node tools/lint-budget.mjs --set 99'"
+    },
+    {
+      "name": "battery green and tree clean after all probes (control)",
+      "command": "npm run selftest && git status --short | wc -l",
+      "exitCode": 0,
+      "evidence": "all six tool self-tests clean; gate-registry: 14 gate(s) drift-free; git status --short → 0 lines (probe cleanup verified, incl. reset-before-checkout for staged probe residue)"
+    }
+  ]
+}

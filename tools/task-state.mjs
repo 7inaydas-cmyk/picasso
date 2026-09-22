@@ -52,9 +52,16 @@ function run(cmd) {
   return { code: r.status ?? 1, out: (r.stdout || "") + (r.stderr || "") };
 }
 
+// Pins are recorded as full shell lines — a quoted one-liner must re-run whole,
+// not shattered on spaces.
+function runShell(command) {
+  const r = spawnSync(command, { shell: true, encoding: "utf8" });
+  return { code: r.status ?? 1, out: (r.stdout || "") + (r.stderr || "") };
+}
+
 function rerunPins(t) {
   for (const pin of t.pins || []) {
-    const r = run(pin.command.split(" "));
+    const r = runShell(pin.command);
     if (r.code !== 0) return { ok: false, pin: pin.command, out: r.out };
   }
   return { ok: true };
@@ -98,7 +105,7 @@ function cmdRedCheck(args) {
   if (!command) die('usage: task-state.mjs red-check <id> --command "<failing check>"');
   if (!["executing", "verified"].includes(t.phase))
     die(`red-check records a failing check mid-flight; '${id}' is at ${t.phase}`);
-  const r = run(command.split(" "));
+  const r = runShell(command);
   if (r.code === 0)
     die(`refused: the command PASSED — a red-check pin must FAIL when recorded\n  fix: record a check that genuinely fails, then make it pass`);
   t.pins.push({ command, recordedExit: r.code,
@@ -206,6 +213,17 @@ function selfTest() {
   closeSync(openSync(flag, "w"));
   ok("verified lands when pin is green + battery green", call(["advance", "probe"]).code === 0);
   ok("adversarial lands on green battery", call(["advance", "probe"]).code === 0);
+
+  // A QUOTED shell one-liner pin must record and re-run whole, not shattered.
+  const q = call(["new", "quoted-probe", "--risk-class", "tooling"]);
+  call(["scope", "quoted-probe", "--add", "tools/**"]);
+  call(["advance", "quoted-probe"]); call(["advance", "quoted-probe"]);
+  const qflag = join(dir, "q flag with spaces.txt");
+  const qrc = call(["red-check", "quoted-probe", "--command", `sh -c 'test -f "${qflag}"'`]);
+  ok("red-check records a quoted one-liner", qrc.code === 0);
+  ok("verified refuses while the quoted pin is red", call(["advance", "quoted-probe"]).code !== 0);
+  writeFileSync(qflag, "x");
+  ok("verified re-runs the quoted pin green (shell semantics)", call(["advance", "quoted-probe"]).code === 0);
 
   const good = { probes: [
     { name: "footer fence", command: "commit-msg probe", exitCode: 1, evidence: "refused: no task: footer" },
