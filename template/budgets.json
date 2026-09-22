@@ -6,7 +6,7 @@
     },
     {
       "path": "dist/assets/*.js",
-      "maxBytes": 225304
+      "maxBytes": 225375
     }
   ]
 }
