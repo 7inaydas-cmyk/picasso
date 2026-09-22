@@ -1,0 +1,1 @@
+/home/excelsior/Desktop/picasso/plugin/hooks/authoring-gate.mjs

@@ -1,0 +1,45 @@
+{
+  "id": "plugin-runtime-adapters",
+  "phase": "executing",
+  "riskClass": "tooling",
+  "scope": [
+    "plugin",
+    "docs",
+    ".tasks",
+    ".github",
+    "package.json",
+    "picasso.json",
+    "README.md"
+  ],
+  "pins": [
+    {
+      "command": "test -f plugin/claude-code/.claude-plugin/plugin.json",
+      "recordedExit": 1,
+      "evidence": "(no output)",
+      "at": "2026-09-22T09:14:44.150Z",
+      "retired": true,
+      "retiredBecause": "layout renamed during the build: the claude-code adapter landed at plugin/claude-code-persistent (the marketplace-installed path); its plugin.json exists and the cold verifier checked it"
+    },
+    {
+      "command": "bash -c 'git log --all --oneline | grep -q plugin-runtime-adapters'",
+      "recordedExit": 1,
+      "evidence": "(no output)",
+      "at": "2026-09-22T10:49:41.791Z"
+    }
+  ],
+  "created": "2026-09-22T09:14:43.873Z",
+  "history": [
+    {
+      "at": "2026-09-22T09:14:43.873Z",
+      "to": "intake"
+    },
+    {
+      "at": "2026-09-22T09:14:44.078Z",
+      "to": "planned"
+    },
+    {
+      "at": "2026-09-22T09:14:44.126Z",
+      "to": "executing"
+    }
+  ]
+}

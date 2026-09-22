@@ -1,0 +1,39 @@
+{
+  "description": "picasso-enforcement persistent-install registration only — the shared core (hooks/*.mjs, lib/) is symlinked into this root from ../.. so the law stays single; ${CLAUDE_PLUGIN_ROOT} is this dir in place or its marketplace-cache copy",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/authoring-gate.mjs\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/banner.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/banner.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

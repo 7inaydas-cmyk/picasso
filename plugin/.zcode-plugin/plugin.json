@@ -1,0 +1,6 @@
+{
+  "name": "picasso-enforcement",
+  "version": "0.1.0",
+  "description": "Picasso enforcement plugin: PreToolUse authoring gate + banner for the front-end task lifecycle. Governs only the repo's declared front-end jurisdiction; inert everywhere else.",
+  "author": { "name": "picasso" }
+}

@@ -1,0 +1,54 @@
+{
+  "task": "plugin-runtime-adapters",
+  "at": "2026-09-22",
+  "probes": [
+    {
+      "name": "in-jurisdiction edit with no in-flight task is DENIED (exit 2) through the real hook",
+      "command": "cd template; echo '{\"tool_name\":\"Edit\",\"cwd\":\"$PWD\",\"tool_input\":{\"file_path\":\"$PWD/src/App.tsx\"}}' | node ../plugin/hooks/authoring-gate.mjs",
+      "exitCode": 2,
+      "evidence": "picasso authoring-gate: the edit targets src/App.tsx, inside this repo's declared front-end jurisdiction, and no in-flight task covers it + rule + fix"
+    },
+    {
+      "name": "the same edit under an in-flight covering task is ALLOWED (exit 0)",
+      "command": "printf '{...probe-ui, executing, scope src/**...}' > .tasks/probe.json; same payload; rm .tasks/probe.json",
+      "exitCode": 0,
+      "evidence": "picasso authoring-gate: src/App.tsx is covered by probe-ui"
+    },
+    {
+      "name": "out-of-jurisdiction edit passes untouched",
+      "command": "same payload with file_path=<template>/README.md",
+      "exitCode": 0,
+      "evidence": "picasso authoring-gate: README.md is outside the declared front-end jurisdiction"
+    },
+    {
+      "name": "a repo without a picasso harness is INERT",
+      "command": "cd /tmp; same payload shape for /tmp/x.tsx",
+      "exitCode": 0,
+      "evidence": "picasso authoring-gate exits 0 silently (not this plugin's claim)"
+    },
+    {
+      "name": "the banner arms with jurisdiction and fails open",
+      "command": "node plugin/hooks/banner.mjs < /dev/null (in template; then bare dir)",
+      "exitCode": 0,
+      "evidence": "stdout JSON hookSpecificOutput with armed jurisdiction line; bare dir exits 0"
+    },
+    {
+      "name": "ZCode registration validates via the official CLI",
+      "command": "node /opt/ZCode/resources/glm/zcode.cjs plugins validate /home/excelsior/Desktop/picasso/plugin",
+      "exitCode": 0,
+      "evidence": "Plugin manifest is valid — registered via ~/.zcode/cli/config.json plugins.dirs (researcher-documented route)"
+    },
+    {
+      "name": "Claude Code install is present and its cache carries the latest shared law",
+      "command": "diff cache/hooks/banner.mjs plugin/hooks/banner.mjs; diff cache/lib/gate-law.mjs plugin/lib/gate-law.mjs; installed_plugins.json entry picasso-enforcement@picasso-local",
+      "exitCode": 0,
+      "evidence": "picasso-enforcement@picasso-local installed (gitCommitSha 8d10c50); cache banner.mjs and gate-law.mjs byte-identical to the workspace shared core"
+    },
+    {
+      "name": "both batteries and the gate-law matrix (control)",
+      "command": "npm run selftest (root, incl. vendor-sync + gate-law) && npm --prefix template run selftest",
+      "exitCode": 0,
+      "evidence": "root 25 gates drift-free; template battery green; gate-law matrix 13 checks clean"
+    }
+  ]
+}

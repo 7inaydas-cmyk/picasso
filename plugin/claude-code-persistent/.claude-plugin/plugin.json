@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "picasso-enforcement",
+  "version": "0.1.0",
+  "description": "Picasso enforcement plugin: PreToolUse authoring gate + banner for the front-end task lifecycle. Governs only the repo's declared front-end jurisdiction; inert everywhere else. Persistent-install root: same law, registration reaching the shared core through in-root symlinks.",
+  "author": { "name": "picasso" }
+}

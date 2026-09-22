@@ -30,6 +30,11 @@ const DEFAULT_JURISDICTION_NOTE = "no picasso.json jurisdiction declared — the
  * Parse a PreToolUse hook payload (the stdin JSON). Mirrors stallion's contract:
  * Edit/Write carry file_path; path/filePath spellings are accepted — a gate that
  * cannot name the file it is asked to bless must refuse, not guess.
+ *
+ * cwd resolution spans both runtimes: Claude Code puts cwd in the payload; the
+ * ZCode payload does not carry it, so fall back to the injected project dir
+ * (CLAUDE_PROJECT_DIR on Claude Code, ZCODE_PROJECT_DIR on ZCode), then the
+ * process cwd.
  */
 export function parseEditPayload(payload) {
   if (!payload || typeof payload !== "object") return { ok: false, reason: "hook payload is not an object" };
@@ -38,7 +43,9 @@ export function parseEditPayload(payload) {
   if (typeof raw !== "string" || raw.length === 0) {
     return { ok: false, reason: `cannot determine the target file of the ${toolName} edit` };
   }
-  const cwd = typeof payload.cwd === "string" && payload.cwd.length > 0 ? payload.cwd : process.cwd();
+  const cwd = typeof payload.cwd === "string" && payload.cwd.length > 0
+    ? payload.cwd
+    : process.env.CLAUDE_PROJECT_DIR || process.env.ZCODE_PROJECT_DIR || process.cwd();
   return { ok: true, toolName, filePath: raw, cwd };
 }
 
