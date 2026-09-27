@@ -1,0 +1,149 @@
+{
+ "task": "vendorable-checks-rereview-fixes-r1",
+ "at": "2026-09-28",
+ "lanes": "The findings came from an external re-review of vendorable-checks-review-fixes (p1-rereview-findings.json: two MEDIUM, two LOW). This pass was run by the agent that wrote the fixes, NOT by an independent verifier; independence comes from the next reviewer. It re-runs each finding's repro against the committed fix in a scratch clone of this repo, compares against base f6bc55d where the defect was live, runs single-line mutants of every fix, and probes the commit fences.",
+ "probes": [
+  {
+   "name": "F1: a `*` budget over a large nested directory refuses (HEAD, scratch clone)",
+   "command": "(dist/assets/app-abc.js = 500000 B, dist/index.html = 14 B) node pc/tools/size-budget.mjs --budgets g.json  # {path:'w/dist/*', maxBytes:100000}",
+   "exitCode": 1,
+   "evidence": "size-budget: w/dist/*: 500014B over budget 100000B (+400014B)"
+  },
+  {
+   "name": "F1 sanity: the same tree on base f6bc55d is green (the defect was live)",
+   "command": "node base-sb.mjs --budgets g.json   (git show f6bc55d:tools/size-budget.mjs)",
+   "exitCode": 0,
+   "evidence": "size-budget: 1 artifact(s) within budget"
+  },
+  {
+   "name": "F1: --tighten from 9999999 stores the real size, not the inode size",
+   "command": "node pc/tools/size-budget.mjs --budgets g.json --tighten   # {path:'w/dist/*', maxBytes:9999999}",
+   "exitCode": 0,
+   "evidence": "tightened 1 budget(s); maxBytes 500014 (the finding's HEAD wrote 4110 = 4096 + 14)"
+  },
+  {
+   "name": "F1 edge: a glob whose only matches are empty directories is MISSING, not zero",
+   "command": "(w/e/a, w/e/b empty) node pc/tools/size-budget.mjs --budgets g.json   # {path:'w/e/*', maxBytes:10}",
+   "exitCode": 1,
+   "evidence": "size-budget: w/e/*: budgeted artifact is MISSING — a vanished asset is a regression"
+  },
+  {
+   "name": "F2: the drift gate refuses a committed docs/gates/node_modules holding a forged @axe-core/playwright",
+   "command": "(git host; --export docs/gates/picasso; forged package.json + index.js whose analyze() returns {violations:[]}; git commit) node docs/gates/picasso/checks-vendor.mjs",
+   "exitCode": 1,
+   "evidence": "refused: the vendored bundle ... diverges from VENDOR.json (picasso 21ba353a0b): shadowing node_modules: docs/gates/node_modules"
+  },
+  {
+   "name": "F2: the clone-run --freshness --bundle refuses the same host",
+   "command": "node ../pc/tools/checks-vendor.mjs --freshness ../pc --bundle docs/gates/picasso",
+   "exitCode": 1,
+   "evidence": "refused: the bundle diverges from VENDOR.json: shadowing node_modules: docs/gates/node_modules"
+  },
+  {
+   "name": "F2 sanity: the same plant under base f6bc55d's exported checker is green",
+   "command": "(host exported from a clone at f6bc55d) node docs/gates/picasso/checks-vendor.mjs",
+   "exitCode": 0,
+   "evidence": "checks-vendor: OK — 7 bundled file(s) match VENDOR.json (picasso f6bc55dae9)"
+  },
+  {
+   "name": "F2: a node_modules two levels up (docs/node_modules) is refused too",
+   "command": "mv docs/gates/node_modules docs/node_modules; node docs/gates/picasso/checks-vendor.mjs",
+   "exitCode": 1,
+   "evidence": "shadowing node_modules: docs/node_modules"
+  },
+  {
+   "name": "F2 control: the repo root's own node_modules is the install, not a shadow",
+   "command": "mkdir -p node_modules/playwright; node docs/gates/picasso/checks-vendor.mjs",
+   "exitCode": 0,
+   "evidence": "checks-vendor: OK — 7 bundled file(s) match VENDOR.json (picasso 21ba353a0b)"
+  },
+  {
+   "name": "F3: --export over a hard-linked member leaves the linked host file alone",
+   "command": "echo host-owned > host-tool.mjs; rm docs/gates/picasso/ratchet.mjs; ln host-tool.mjs docs/gates/picasso/ratchet.mjs; node ../pc/tools/checks-vendor.mjs --export docs/gates/picasso; cat host-tool.mjs; node docs/gates/picasso/checks-vendor.mjs",
+   "exitCode": 0,
+   "evidence": "drift gate first printed 'patched: ratchet.mjs'; export exit 0; host-tool.mjs still 'host-owned' with link count 1; drift gate then OK"
+  },
+  {
+   "name": "F4 (registered, not fixed): a pin on a throwaway origin branch still reads FRESH on HEAD",
+   "command": "(clone of a bare origin; patch tools/a11y-ratchet.mjs, commit on main, git push origin HEAD:refs/heads/scratch-launder, fetch; copy into the bundle, VENDOR.json upstream + a11y digest rewritten) node pc/tools/checks-vendor.mjs --freshness pc --bundle host/docs/gates/picasso",
+   "exitCode": 0,
+   "evidence": "'## main...origin/main [ahead 1]', branch -r --contains HEAD = origin/scratch-launder; 'checks-vendor: FRESH — the pin is <pc>'s HEAD (8db09d57f1)' — onOrigin is untouched by this task"
+  },
+  {
+   "name": "mutants: single-line mutants of each fix, run against the self-tests",
+   "command": "(size-budget: measureOne(join(dir, f)) -> statSync(...).size; checks-vendor: drop ...shadowModules(dir); i > 0 -> i >= 0; return found -> return []; drop either rmSync line in writeBundle) node <mutant>/tools/<file> --self-test",
+   "exitCode": 1,
+   "evidence": "all 6 distinct mutants killed. The first run found the manifest rmSync mutant SURVIVING (the hard-link case linked only ratchet.mjs); 78c1a08 extends the case to VENDOR.json and it is now killed"
+  },
+  {
+   "name": "fence: staged code outside every in-flight task's scope is refused",
+   "command": "(scratch clone) echo '// x' >> tools/task-state.mjs; git add tools/task-state.mjs; node tools/task-coverage.mjs --staged",
+   "exitCode": 1,
+   "evidence": "task-coverage: refused: staged code outside every in-flight task's declared scope: tools/task-state.mjs"
+  },
+  {
+   "name": "fence: a commit message with no task footer is refused",
+   "command": "printf 'fix: something\\n\\nCo-Authored-By: x <x@y>\\n' > m; node tools/task-coverage.mjs --commit-msg m   (with a staged in-scope file)",
+   "exitCode": 1,
+   "evidence": "task-coverage: refused: no 'task: <id>' footer in the message's final trailer block"
+  }
+ ],
+ "findings": [
+  {
+   "id": "F1",
+   "severity": "MEDIUM",
+   "claim": "R6 was fixed in only one of measurePath's two branches: a `*` budget measured a matched directory by its inode size, so `dist/*` stayed green however large dist/assets grew, and --tighten stored the inode size.",
+   "found_by": "external re-review (p1)",
+   "pin": "pin 1 (size-budget self-test: 'wildcard matching a directory'); probes F1 x4",
+   "outcome": "RESOLVED in f91e78a: each glob match goes through measureOne, the same path as a plain entry (a directory sums its files; an empty one is null and does not count as found). TASK-LIFECYCLE says so."
+  },
+  {
+   "id": "F2",
+   "severity": "MEDIUM",
+   "claim": "R1's bare-package half: render-report resolves playwright and @axe-core/playwright by walking up from the bundle, so a committed docs/gates/node_modules (survives a clean install) could forge axe while the drift gate and --freshness stayed green.",
+   "found_by": "external re-review (p1)",
+   "pin": "pin 2 (checks-vendor self-test: 'between the bundle and the repo root' + the root-install control); probes F2 x5",
+   "outcome": "RESOLVED in f91e78a: driftProblems (so the drift gate, --freshness and --export's verify) refuses any node_modules on the ancestors strictly between the bundle and the git toplevel. ponytail ceiling in code: outside a git repo nothing above the bundle is checked. WIRING part A says so and names the root install."
+  },
+  {
+   "id": "F3",
+   "severity": "LOW",
+   "claim": "R8's write-through repair survived through a hard link: --export overwrote the shared inode, i.e. a host file outside the bundle.",
+   "found_by": "external re-review (p1)",
+   "pin": "pin 3 (checks-vendor self-test: 'hard-linked member'); probe F3; mutants",
+   "outcome": "RESOLVED (one line per write in writeBundle, a file this task already touched): each entry is removed before it is written, so the export makes a fresh inode. 78c1a08 extends the case to VENDOR.json after the adversarial pass found that half uncovered. The drift gate still accepts a hard-linked member whose bytes match; that is harmless (node runs the bundle path, and a hard link has no other directory)."
+  },
+  {
+   "id": "F4",
+   "severity": "LOW",
+   "claim": "R2's origin requirement accepts any branch under refs/remotes/origin/*, so a pin pushed only to a throwaway origin branch reads FRESH.",
+   "found_by": "external re-review (p1)",
+   "pin": "probe F4 (still reproduces on HEAD)",
+   "outcome": "OPEN — not a one-line change: requiring ancestry of origin's default tip needs a refs/remotes/origin/HEAD resolution with a fallback, touches both --export and --freshness, and changes the self-test fixture (which pushes with remote add, so origin/HEAD is unset). Needs push rights to picasso's origin, which leaves a public trace. Fix direction as filed."
+  },
+  {
+   "id": "N1",
+   "severity": "LOW",
+   "claim": "This task's own ceiling: the shadow check is bounded by the git toplevel, so a node_modules ABOVE the toplevel (e.g. a home-directory install when the host has no root install) or any node_modules in a non-git host is not checked.",
+   "found_by": "this pass",
+   "pin": "none",
+   "outcome": "OPEN — marked ponytail in code. Neither arrives through a clone of the host."
+  },
+  {
+   "id": "N2",
+   "severity": "LOW",
+   "claim": "For a shadowing node_modules the drift gate's fix line still prints the re-vendor command; the remedy (remove it) is only in the rule line, and a re-export then refuses in its own verify step.",
+   "found_by": "this pass",
+   "pin": "none",
+   "outcome": "OPEN"
+  },
+  {
+   "id": "N3",
+   "severity": "LOW",
+   "claim": "`node tools/task-state.mjs status` (the first step AGENTS.md names) still crashes on .tasks/*.adversarial.json files.",
+   "found_by": "this pass (already registered in vendorable-checks-review-fixes' record)",
+   "pin": "none",
+   "outcome": "OPEN — pre-existing, outside scope; not re-registered as new"
+  }
+ ]
+}
