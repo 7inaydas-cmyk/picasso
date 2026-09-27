@@ -590,7 +590,12 @@ function gitCases(ok, tmp) {
   ok("the repo root's own node_modules is the install, not a shadow", run(hostChecker, []).code === 0);
   // Node resolves a bare specifier to the nearest package.json's own exports when
   // it names itself that package, before it reads any node_modules.
+  // A real host has its own root package.json; only the NEAREST one is the scope.
   const pj = join(hostRoot, "docs", "gates", "package.json");
+  writeFileSync(join(hostRoot, "package.json"), JSON.stringify({ name: "host", private: true }));
+  mkdirSync(pj);
+  ok("a directory named package.json is skipped, as node skips it", run(hostChecker, []).code === 0);
+  rmSync(pj, { recursive: true });
   writeFileSync(pj, JSON.stringify({ name: "@axe-core/playwright", exports: "./axe.mjs" }));
   r = run(hostChecker, []);
   const r3 = run(upChecker, ["--freshness", up, "--bundle", host]);
@@ -606,7 +611,7 @@ function gitCases(ok, tmp) {
   const noGit = join(tmp, "no git"); mkdirSync(noGit);
   r = run(hostChecker, [], tmp, { ...process.env, PATH: noGit });
   ok("inside a git work tree, a git that cannot answer refuses instead of reading as no repo", r.code === 1 && r.out.includes("git cannot name the repo root"));
-  rmSync(join(hostRoot, "node_modules"), { recursive: true }); rmSync(join(hostRoot, ".git"), { recursive: true });
+  rmSync(join(hostRoot, "node_modules"), { recursive: true }); rmSync(join(hostRoot, ".git"), { recursive: true }); rmSync(join(hostRoot, "package.json"));
 
   // A submodule's root is not the install: the superproject's is.
   const gates = join(tmp, "gates"), superHost = join(tmp, "super host");
