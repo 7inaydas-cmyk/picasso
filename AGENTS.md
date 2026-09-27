@@ -42,5 +42,11 @@ front-end brother of stallion: the same task-lifecycle law, retargeted at UI wor
   re-pointing `core.hooksPath` away from `.githooks`).
 - Verify changes with `npm run selftest`; verify the wiring with
   `node tools/task-coverage.mjs --doctor`.
+- The checks bundle (`tools/{ratchet,console-ratchet,a11y-ratchet,size-budget,lint-budget,checks-vendor}.mjs`
+  and `template/scripts/render-report.mjs`) ships into host repos: a change to one
+  of them is a change hosts must re-vendor, and `node tools/checks-vendor.mjs --probe`
+  (in the battery) must stay green. `template/tools/checks-vendor.mjs` is carried
+  only because vendor-sync mirrors every root tool; run bare in the template it
+  refuses (no `VENDOR.json` there), by design.
 - Fresh clones: `git config core.hooksPath .githooks` (hooks are committed; the
   activation is per clone, and the doctor enforces it).

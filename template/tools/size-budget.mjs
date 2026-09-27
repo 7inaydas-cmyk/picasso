@@ -18,6 +18,7 @@ import { existsSync, readFileSync, writeFileSync, mkdtempSync, rmSync, statSync,
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join, dirname, basename } from "node:path";
+import { fileURLToPath } from "node:url";
 
 function globToRegex(glob) {
   let re = "";
@@ -68,7 +69,7 @@ function selfTest() {
 
   const measureReal = p => { try { return statSync(p).size; } catch { return null; } };
   const run = extra => {
-    const SELF = new URL(import.meta.url).pathname;
+    const SELF = fileURLToPath(import.meta.url);
     const r = spawnSyncNode([SELF, "--budgets", budgetsFile, ...extra]);
     return { code: r.status, out: (r.stdout || "") + (r.stderr || "") };
   };

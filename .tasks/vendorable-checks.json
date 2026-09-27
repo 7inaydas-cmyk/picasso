@@ -1,0 +1,51 @@
+{
+  "id": "vendorable-checks",
+  "phase": "executing",
+  "riskClass": "tooling",
+  "scope": [
+    "tools/checks-vendor.mjs",
+    "tools/console-ratchet.mjs",
+    "tools/a11y-ratchet.mjs",
+    "tools/size-budget.mjs",
+    "tools/lint-budget.mjs",
+    "template/tools/checks-vendor.mjs",
+    "template/tools/console-ratchet.mjs",
+    "template/tools/a11y-ratchet.mjs",
+    "template/tools/size-budget.mjs",
+    "template/tools/lint-budget.mjs",
+    "template/VENDOR-PIN",
+    "package.json",
+    "docs/gates/gate-registry.json",
+    "docs/WIRING.md",
+    "docs/TASK-LIFECYCLE.md",
+    "README.md",
+    "AGENTS.md",
+    "plugin/skills/picasso/SKILL.md",
+    "plugin/package.json",
+    "plugin/.zcode-plugin/plugin.json",
+    "plugin/claude-code-persistent/.claude-plugin/plugin.json"
+  ],
+  "pins": [
+    {
+      "command": "t=$(mktemp -d) && trap 'rm -rf \"$t\"' EXIT && d=\"$t/host with space\" && mkdir -p \"$d\" && cp tools/ratchet.mjs tools/console-ratchet.mjs tools/a11y-ratchet.mjs tools/size-budget.mjs tools/lint-budget.mjs \"$d/\" || { echo \"P1-SETUP: copy failed (not a finding)\"; exit 2; }; for n in console-ratchet a11y-ratchet size-budget lint-budget; do node \"$d/$n.mjs\" --self-test >/dev/null 2>&1 || { echo \"P1-RED: $n self-test fails from a spaced path\"; exit 1; }; done; node tools/checks-vendor.mjs --probe >/dev/null 2>&1 || { echo \"P1-RED: no vendorable-checks probe\"; exit 1; }",
+      "recordedExit": 1,
+      "evidence": "P1-RED: console-ratchet self-test fails from a spaced path",
+      "at": "2026-09-27T18:34:09.083Z"
+    }
+  ],
+  "created": "2026-09-27T18:33:53.616Z",
+  "history": [
+    {
+      "at": "2026-09-27T18:33:53.616Z",
+      "to": "intake"
+    },
+    {
+      "at": "2026-09-27T18:33:54.401Z",
+      "to": "planned"
+    },
+    {
+      "at": "2026-09-27T18:33:54.434Z",
+      "to": "executing"
+    }
+  ]
+}

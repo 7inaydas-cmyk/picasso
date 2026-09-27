@@ -2,7 +2,7 @@
 name: picasso
 metadata:
   author: picasso contributors
-  version: "0.3.0"
+  version: "0.4.0"
 description: "Front-end task-lifecycle harness and gate discipline (picasso, the front-end brother of stallion). Use when doing front-end work (components, pages, styles, templates, a front-end verification walk of a site) in a repo that vendors picasso, in a stallion-governed repo such as Antitube (apps/web), when adopting picasso into a front-end repo, or when the user mentions picasso, the front-end jurisdiction, front-end gates, a console-error / a11y / render-failure ratchet, or visual QA."
 license: "MIT — see the picasso repo's LICENSE"
 ---
@@ -20,17 +20,29 @@ fences refuse violations with the rule, the evidence, and an exact fix command.
    fences and plugin all apply — see "The lifecycle" below. An edit inside the
    declared jurisdiction without a covering in-flight task is **denied at edit
    time**; that refusal is the feature — run the fix command it prints.
-2. **The repo is governed by stallion** (`tools/harness/`, `tasks/`,
-   `.stallion-base` — **Antitube** is one: front end at `apps/web`, TanStack
-   Start + React, live at https://antitube.tv): **stallion owns the lifecycle and
-   the fences** — open and advance a stallion task, cite it in the commit
-   footer, follow that repo's AGENTS.md/CLAUDE.md. The picasso plugin stays
-   inert there (no `picasso.json`). What picasso contributes is its **front-end
-   gate discipline**, run from a picasso checkout — see the next section.
+2. **The repo is governed by stallion** — NO `picasso.json`, and a stallion
+   harness: `.stallion-base`, or `tasks/` beside `tools/task-coverage.mjs`
+   (stallion's native layout), or a vendored `tools/harness/` (**Antitube**: front
+   end at `apps/web`, TanStack Start + React, live at https://antitube.tv).
+   **Stallion owns the lifecycle and the fences** — open and advance a stallion
+   task, cite it in the commit footer, follow that repo's AGENTS.md/CLAUDE.md.
+   The picasso plugin stays inert there. What picasso contributes is its
+   **front-end gate discipline**, in one of two forms:
+   - **2a — the repo vendors picasso's checks bundle**: `git ls-files '*VENDOR.json'`
+     yields a file whose `schema` is `picasso/checks-manifest@1` (its directory is
+     the bundle, e.g. `docs/gates/picasso/`). Run the host's OWN registered
+     commands (its battery and CI; picasso's `docs/WIRING.md` part A lists them);
+     baselines live in the host's `docs/gates/`; fixes land under the host's
+     lifecycle; never add `picasso.json`. Re-vendoring is
+     `node <picasso>/tools/checks-vendor.mjs --export <bundle-dir>` (a host task);
+     at each wave's intake run
+     `node <bundle-dir>/checks-vendor.mjs --freshness <picasso-clone>`.
+   - **2b — no bundle** (Antitube today): run the checks from a picasso checkout —
+     see the next section.
 3. **Neither**: picasso makes no claim; work freely, or adopt picasso
    (picasso's `docs/WIRING.md`, "Adopting the gates").
 
-## The gate discipline in a repo that does not vendor picasso (e.g. Antitube)
+## Mode 2b — the gate discipline from a picasso checkout (e.g. Antitube)
 
 From a picasso checkout (`PICASSO=~/Desktop/picasso` on this machine; once:
 `npm --prefix "$PICASSO/template" install && npm --prefix "$PICASSO/template" exec playwright install chromium`):

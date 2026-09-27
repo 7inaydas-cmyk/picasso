@@ -13,9 +13,11 @@ Picasso (P-i-c-a-s-s-o).
   refuse out-of-scope code, footerless commits, and unwired clones — with the
   rule, the evidence, and an exact fix command.
 - **Front-end gates**: the lint ratchet cap (`tools/lint-budget.mjs`), the a11y
-  baseline ratchet (`tools/a11y-ratchet.mjs`, the GSA pattern), and the bundle
-  size ratchet (`tools/size-budget.mjs`). Visual regression stays in the
-  adversarial phase, never a commit fence.
+  baseline ratchet (`tools/a11y-ratchet.mjs`, the GSA pattern), the console-error
+  ratchet (`tools/console-ratchet.mjs`), and the bundle size ratchet
+  (`tools/size-budget.mjs`) — vendorable into any repo at a pinned commit,
+  sha256-manifested and drift-checked (`tools/checks-vendor.mjs`). Visual
+  regression stays in the adversarial phase, never a commit fence.
 - **Enforcement plugin**: [`plugin/`](plugin/) — a PreToolUse hook that denies
   front-end edits outside an in-flight task, judged by the repo's own vendored
   harness. Governed by the repo's declared jurisdiction (`picasso.json`);

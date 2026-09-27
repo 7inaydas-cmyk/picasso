@@ -22,6 +22,7 @@ import { existsSync, readFileSync, writeFileSync, mkdtempSync, rmSync } from "no
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { judge } from "./ratchet.mjs";
 
 function die(msg) { console.error(`a11y-ratchet: ${msg}`); process.exit(1); }
@@ -41,7 +42,7 @@ function readList(file, what) {
 }
 
 function spawnJudge(args) {
-  const SELF = new URL(import.meta.url).pathname;
+  const SELF = fileURLToPath(import.meta.url);
   const r = spawnSync("node", [SELF, ...args], { encoding: "utf8" });
   return { code: r.status, out: (r.stdout || "") + (r.stderr || "") };
 }

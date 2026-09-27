@@ -18,6 +18,7 @@ import { existsSync, readFileSync, writeFileSync, mkdtempSync, rmSync } from "no
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 function die(msg) { console.error(`lint-budget: ${msg}`); process.exit(1); }
 
@@ -58,7 +59,7 @@ function selfTest() {
 
   // The --linter flag validates before anything spawns: probe against a missing
   // budget file so the oxlint path dies at the cap check, never at a network npx.
-  const SELF = new URL(import.meta.url).pathname;
+  const SELF = fileURLToPath(import.meta.url);
   const probe = f => {
     const r = spawnSync("node", [SELF, "--check", "--linter", f], { encoding: "utf8",
       env: { ...process.env, PICASSO_LINT_BUDGET: join(dir, "no-cap.json") } });

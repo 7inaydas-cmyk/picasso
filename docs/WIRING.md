@@ -69,7 +69,112 @@ playwright-mcp) and must record, per probe: route, breakpoint, what the
 screenshot shows, and the judgment. `done` refuses a pass where nothing was
 refused — a screenshot loop that never found anything to question did not look.
 
-## The gate discipline in a repo that does not vendor picasso
+## Picasso's checks in a repo picasso does not govern
+
+Two ways to run picasso's front-end checks in a repo whose lifecycle is someone
+else's (a stallion-governed repo): vendor the checks bundle (A, recommended), or
+run them from a picasso checkout (B).
+
+### A. The vendored checks bundle (recommended for a stallion-governed repo)
+
+`tools/checks-vendor.mjs --export` writes seven files FLAT into one host
+directory — `render-report.mjs`, `ratchet.mjs`, `console-ratchet.mjs`,
+`a11y-ratchet.mjs`, `size-budget.mjs`, `lint-budget.mjs` and the checker itself
+— beside a `VENDOR.json` manifest: `schema` (`picasso/checks-manifest@1`),
+`upstream` (the picasso commit) and a `source` + `sha256` per file. The bundle is
+atomic: a manifest naming more or fewer files is refused. Export from a PUSHED
+picasso checkout — the bytes come from HEAD's objects (a local edit is warned
+about, never exported) and an unpushed HEAD is refused, so the pin stays
+findable:
+
+```sh
+# from the host repo's root
+node <picasso>/tools/checks-vendor.mjs --export docs/gates/picasso
+```
+
+In a stallion host, place it at `docs/gates/picasso/`: `tools/` is stallion's
+own vendored corpus (every file there must be declared in stallion's manifest),
+and a top-level `vendor/` is not code to stallion's fence, so edits there would
+need no task at all.
+
+- **Drift gate** (host battery): `node docs/gates/picasso/checks-vendor.mjs`,
+  from any cwd — refuses a missing or malformed manifest, an undeclared file, a
+  deleted file or a patched one, and names the re-vendor command.
+- **Freshness** (each wave's intake):
+  `node docs/gates/picasso/checks-vendor.mjs --freshness <picasso-clone>` —
+  refuses when the manifest's digests are not picasso's bytes at its own pin
+  (`patched against upstream`: a hand patch under a regenerated manifest), when
+  picasso moved a bundled source past the pin, or when the clone is behind the
+  pin or behind its own fetched upstream.
+- **Host dependencies**: `playwright` pinned exactly (picasso pins `1.63.0`) and
+  `@axe-core/playwright`; chromium via
+  `npx playwright install chromium --with-deps`. Everything else runs on node
+  alone (`--freshness` also needs git).
+- **Baselines** live in the host's `docs/gates/` and start as `[]`:
+  `console-baseline.json`, `a11y-baseline.json`, `render-baseline.json`; plus
+  `size-budgets.json` (`--tighten` after the first build) and, for an ESLint or
+  Oxlint host only, `lint-budget.json` (lint-budget wraps no other linter).
+  **Canary probe:** before trusting a green run, plant one console error and one
+  a11y violation and watch each gate FAIL.
+- `reports/ui/` is gitignored.
+- **Never add `picasso.json`** to such a host: beside stallion's
+  `tools/task-coverage.mjs` it would arm picasso's plugin against stallion's law.
+
+The host's gate-registry rows. Battery (members of `package.json` `selftest`):
+
+```
+node docs/gates/picasso/checks-vendor.mjs
+node docs/gates/picasso/checks-vendor.mjs --self-test
+node docs/gates/picasso/ratchet.mjs --self-test
+node docs/gates/picasso/console-ratchet.mjs --self-test
+node docs/gates/picasso/a11y-ratchet.mjs --self-test
+node docs/gates/picasso/size-budget.mjs --self-test
+node docs/gates/picasso/lint-budget.mjs --self-test
+```
+
+CI: a tracked workflow on push and pull_request, no `continue-on-error`. Install,
+build, start the app in the background, and WAIT until it answers — `BASE_URL`
+mode does not wait, so a sweep that races the server flakes red:
+
+```yaml
+- run: npx playwright install chromium --with-deps
+- run: <build>
+- run: <start the app> &
+- run: for i in $(seq 1 60); do curl -fsS http://127.0.0.1:<port>/ >/dev/null && exit 0; sleep 1; done; exit 1
+- run: node docs/gates/picasso/render-report.mjs --self-test
+- run: BASE_URL=http://127.0.0.1:<port> ROUTES="/, /feed, /watch" ROOT_SELECTOR=body REPORT_DIR=reports/ui node docs/gates/picasso/render-report.mjs
+- run: node docs/gates/picasso/console-ratchet.mjs --report reports/ui/console-report.json --baseline docs/gates/console-baseline.json
+- run: node docs/gates/picasso/a11y-ratchet.mjs --violations reports/ui/a11y-report.json --baseline docs/gates/a11y-baseline.json --render-failures reports/ui/render-failures.json --render-baseline docs/gates/render-baseline.json
+- run: node docs/gates/picasso/size-budget.mjs --budgets docs/gates/size-budgets.json
+# ESLint/Oxlint hosts only:
+- run: PICASSO_LINT_BUDGET=docs/gates/lint-budget.json node docs/gates/picasso/lint-budget.mjs --check --linter eslint
+```
+
+The registry carries the sweep line with or without its env prefix: dropping
+`ROUTES` narrows the sweep to `/`, dropping `BASE_URL` turns render-report back
+into its template default (a vite build + preview). The workflow file is fence
+surface — review every change to that line.
+
+REQUIRED in the same host adoption commit:
+
+- a `docs/gates/coverage.json` gate, or stallion's census orphans the bundle and
+  the host battery goes red the moment it lands — checked with
+  `node tools/gate-coverage.mjs`:
+  ```json
+  {"name":"picasso-checks","spec":"docs/gates/picasso/**/*.mjs","sees":"the battery runs the bare drift check and every bundled self-test through declared gate-registry rows; the push fence counts docs/gates/** as code"}
+  ```
+- `docs/gates/picasso/**` in the host's formatter, linter and dead-code (knip)
+  ignores — a reformatted byte reads as `patched`, and the bundle exports symbols
+  the host never imports — and `docs/gates/picasso/** -text` in `.gitattributes`,
+  so no checkout rewrites its line endings.
+
+Under stallion, `docs/gates/**` is fence surface: every re-vendor and every
+baseline edit (a `--prune` after a fix included) is a protected-tier stallion task
+carrying a founder approval, recorded exactly as that stallion's `task-state`
+refusal prints (in the task record, committed alone, where stallion records
+approvals in-record). Picasso adds no approval mechanism of its own.
+
+### B. From a picasso checkout (no vendoring)
 
 A repo governed by stallion (Antitube is one) keeps stallion's lifecycle and
 fences; picasso contributes its front-end gate discipline, run from a picasso

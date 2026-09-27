@@ -65,7 +65,7 @@ drift then surfaces as scope drift — which the fences already police.
 
 ## The front-end gates
 
-Three ratchet gates ship with picasso; each is deterministic-exit-code and self-tested:
+Four ratchet gates ship with picasso; each is deterministic-exit-code and self-tested:
 
 1. **lint-budget** — `--max-warnings N` cap in `lint-budget.json`; the cap only decreases
    (`--set` refuses a raise). Wraps ESLint or Oxlint (`--check --linter <eslint|oxlint>`);
@@ -78,8 +78,16 @@ Three ratchet gates ship with picasso; each is deterministic-exit-code and self-
    (`--render-failures` + `--render-baseline`) catches stories that fail to render at
    all). Adoption includes the GSA sanity probe: plant a canary violation once and
    confirm the gate turns red before trusting its green.
-3. **size-budget** — `budgets.json` maxBytes per built artifact; over budget fails,
+3. **console-ratchet** — committed baseline of what the browser console says per
+   route (identity: route + first line of text; the render sweep writes the report):
+   a new error fails, a resolved one must be `--prune`d.
+4. **size-budget** — `budgets.json` maxBytes per built artifact; over budget fails,
    missing artifacts fail, `--tighten` ratchets caps down to measured sizes.
+
+The render sweep and the four ratchets also ship as a vendorable bundle
+(`tools/checks-vendor.mjs --export`, see WIRING.md) — sha256-manifested and
+drift-checked in the host; `--probe` in picasso's battery keeps every bundled
+file standalone.
 
 Non-ratchet checks (typecheck, build, unit tests, e2e smoke) are exit-code native and
 belong directly in the consuming project's CI + picasso's registry — they need no

@@ -227,6 +227,24 @@
       "checks": "the vendor-drift fence discriminates (missing/drifted/orphan)"
     },
     {
+      "id": "checks-vendor-self-test",
+      "invocation": "node tools/checks-vendor.mjs --self-test",
+      "transports": [
+        "battery"
+      ],
+      "phase": "executing",
+      "checks": "the checks bundle's drift/freshness law discriminates: undeclared, patched, deleted, missing manifest, atomic shape, export refusals (non-toplevel, unpushed, leftover before any write), moved or renamed source, a manifest regenerated over a patch, imports outside the bundle"
+    },
+    {
+      "id": "checks-vendor-probe",
+      "invocation": "node tools/checks-vendor.mjs --probe",
+      "transports": [
+        "battery"
+      ],
+      "phase": "verified",
+      "checks": "the REAL bundle exports into a host-shaped dir (a path with a space), verifies itself, refuses a patch, imports only node builtins/bundle siblings/the two browser packages, and every browserless bundled self-test runs standalone"
+    },
+    {
       "id": "vendor-sync-check",
       "invocation": "node tools/vendor-sync.mjs",
       "transports": [
