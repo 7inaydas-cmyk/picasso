@@ -573,13 +573,14 @@ function gitCases(ok, tmp) {
   rmSync(join(hostRoot, "node_modules"), { recursive: true }); rmSync(join(hostRoot, ".git"), { recursive: true });
 
   // A hard-linked member is a regular file; the repair must not write through it.
-  const hardTool = join(hostRoot, "hard-tool.mjs");
-  writeFileSync(hardTool, "host-owned\n");
+  const hardTool = join(hostRoot, "hard-tool.mjs"), hardJson = join(hostRoot, "hard.json");
+  writeFileSync(hardTool, "host-owned\n"); writeFileSync(hardJson, "{}\n");
   rmSync(join(host, "ratchet.mjs")); linkSync(hardTool, join(host, "ratchet.mjs"));
+  rmSync(join(host, MANIFEST)); linkSync(hardJson, join(host, MANIFEST));
   r = exp();
-  ok("export over a hard-linked member replaces the entry and leaves the linked host file alone",
-    r.code === 0 && readFileSync(hardTool, "utf8") === "host-owned\n" && run(hostChecker, []).code === 0);
-  rmSync(hardTool);
+  ok("export over a hard-linked member and VENDOR.json replaces both entries and leaves the linked host files alone",
+    r.code === 0 && readFileSync(hardTool, "utf8") === "host-owned\n" && readFileSync(hardJson, "utf8") === "{}\n" && run(hostChecker, []).code === 0);
+  rmSync(hardTool); rmSync(hardJson);
 
   rmSync(join(host, MANIFEST));
   r = run(hostChecker, []);
