@@ -1,0 +1,197 @@
+{
+  "task": "vendorable-checks",
+  "at": "2026-09-28",
+  "lanes": "no lane reviews were supplied ([]); every finding below is this pass's own, so there was nothing to deduplicate and no rediscovery to record",
+  "probes": [
+    {
+      "name": "red-check pin evidence names the real reason (checked by hand, as the design requires)",
+      "command": "node -e 'console.log(require(\"./.tasks/vendorable-checks.json\").pins[0].evidence)'",
+      "exitCode": 1,
+      "evidence": "recordedExit 1; stored evidence ends 'P1-RED: console-ratchet self-test fails from a spaced path' — the expected line, not 'P1-SETUP'. Re-run at a396ace/1abfdef: exit 0, temp dir removed by its trap."
+    },
+    {
+      "name": "--export from this (unpushed) checkout is refused before anything is written",
+      "command": "node tools/checks-vendor.mjs --export <tmp>/host/docs/gates/picasso",
+      "exitCode": 1,
+      "evidence": "checks-vendor: refused: HEAD is on no remote-tracking ref — --freshness could never find this pin | fix: push picasso (git push), then export | <tmp>/host was never created"
+    },
+    {
+      "name": "the template's unwired copy refuses bare (the stated trade-off)",
+      "command": "node template/tools/checks-vendor.mjs",
+      "exitCode": 1,
+      "evidence": "checks-vendor: refused: no VENDOR.json beside the checker in .../template/tools — a bundle without its manifest is unverifiable, never clean"
+    },
+    {
+      "name": "a hand-patched exported a11y-ratchet.mjs is refused bare as 'patched'",
+      "command": "node <clone>/tools/checks-vendor.mjs --export <host>; echo '// host patch' >> <host>/a11y-ratchet.mjs; node <host>/checks-vendor.mjs",
+      "exitCode": 1,
+      "evidence": "checks-vendor: refused: the vendored bundle in <host> diverges from VENDOR.json (picasso da60072e7a): patched: a11y-ratchet.mjs | fix: node <picasso>/tools/checks-vendor.mjs --export <host>"
+    },
+    {
+      "name": "a manifest regenerated over that patch passes bare but --freshness refuses it",
+      "command": "(rewrite VENDOR.json a11y sha256 to the patched bytes) node <host>/checks-vendor.mjs; node <host>/checks-vendor.mjs --freshness <clone>",
+      "exitCode": 1,
+      "evidence": "bare: 'checks-vendor: OK — 7 bundled file(s) match VENDOR.json' (exit 0) | freshness: 'checks-vendor: refused: patched against upstream da60072e7a: a11y-ratchet.mjs' (exit 1)"
+    },
+    {
+      "name": "--freshness after a clone commit to a bundled source is refused as moved",
+      "command": "(commit an edit to tools/size-budget.mjs in <clone>) node <host>/checks-vendor.mjs --freshness <clone>",
+      "exitCode": 1,
+      "evidence": "checks-vendor: refused: picasso moved 1 bundled source(s) past the pin (da60072e7a -> 54f8fc8d8c): tools/size-budget.mjs | fix: re-vendor at 54f8fc8d8c: node <clone>/tools/checks-vendor.mjs --export <host>"
+    },
+    {
+      "name": "--export with an uncommitted edit warns and exports HEAD's bytes",
+      "command": "echo '// local only' >> <clone>/tools/ratchet.mjs; node <clone>/tools/checks-vendor.mjs --export <host2>; grep -c 'local only' <host2>/ratchet.mjs",
+      "exitCode": 0,
+      "evidence": "checks-vendor: warning — local edits are NOT exported (the bundle is HEAD's bytes): M tools/ratchet.mjs | exported 7 file(s) | grep count 0"
+    },
+    {
+      "name": "a planted relative import in render-report.mjs turns --probe RED",
+      "command": "(insert `import { judge } from \"../../tools/ratchet.mjs\";` after render-report.mjs:37 in <clone>) node <clone>/tools/checks-vendor.mjs --probe",
+      "exitCode": 1,
+      "evidence": "checks-vendor: refused: probe — bundled file(s) name a module a flat host dir cannot resolve: render-report.mjs: imports '../../tools/ratchet.mjs'"
+    },
+    {
+      "name": "a deleted registry row (checks-vendor-probe) is refused by gate-registry",
+      "command": "(drop the checks-vendor-probe row from <clone>/docs/gates/gate-registry.json) cd <clone> && node tools/gate-registry.mjs",
+      "exitCode": 1,
+      "evidence": "gate-registry: ... transport 'battery' carries an undeclared invocation: 'node tools/checks-vendor.mjs --probe' | fix: declare it in docs/gates/gate-registry.json or remove it (preceded by 14 misleading 'missing from transport' lines — finding F5)"
+    },
+    {
+      "name": "F1 before the fix: a neutered host checker under a regenerated manifest passes bare AND its own --freshness",
+      "command": "(replace <host>/checks-vendor.mjs with a one-line console.log(OK) and regenerate its sha256) node <host>/checks-vendor.mjs; node <host>/checks-vendor.mjs --freshness <clone>; node <clone>/tools/checks-vendor.mjs --freshness <clone>",
+      "exitCode": 0,
+      "evidence": "bare exit 0 and freshness exit 0 (both print the forged OK); picasso's own checker could not judge the host dir at all: 'refused: no VENDOR.json beside the checker in <clone>/tools' — the finding"
+    },
+    {
+      "name": "F2 before the fix: a multi-line import whose clause carries a quoted comment slips past --probe",
+      "command": "(insert `import {\\n  judge, // it's the shared ratchet\\n} from \"../../tools/ratchet.mjs\";` into <clone>/template/scripts/render-report.mjs) node <clone>/tools/checks-vendor.mjs --probe",
+      "exitCode": 0,
+      "evidence": "checks-vendor: probe clean — 7 file(s) exported, drift refused, imports resolve in the bundle, 6 standalone self-test(s) green — the finding"
+    },
+    {
+      "name": "F3 before the fix: --export into an existing file crashes instead of refusing",
+      "command": "cd <clone> && node tools/checks-vendor.mjs --export README.md",
+      "exitCode": 1,
+      "evidence": "Error: ENOTDIR: not a directory, scandir '<clone>/README.md' at readdirSync ... at walk (tools/checks-vendor.mjs:76:10) — a stack trace, no rule, no fix"
+    },
+    {
+      "name": "F4: --freshness from a clone with no fetched tip reads FRESH FOR THIS WAVE",
+      "command": "(git remote remove origin; commit a README edit in <clone>) node <host>/checks-vendor.mjs --freshness <clone>",
+      "exitCode": 0,
+      "evidence": "checks-vendor: FRESH FOR THIS WAVE — picasso moved past the pin (da60072e7a -> 0ce1705c4f) without touching a bundled source"
+    },
+    {
+      "name": "RED: the three new self-test pins fail on the pre-fix checker",
+      "command": "node tools/checks-vendor.mjs --self-test   (at da60072 plus the three new cases, before the fixes)",
+      "exitCode": 1,
+      "evidence": "FAIL imports: a multi-line clause carrying a comment with a quote is still seen | FAIL export into an existing file refuses with a rule, not a crash | FAIL freshness run by picasso's own checker (--bundle) refuses a neutered host checker under a regenerated manifest | checks-vendor: 3 self-test failure(s)"
+    },
+    {
+      "name": "GREEN: the same self-test after the fixes",
+      "command": "node tools/checks-vendor.mjs --self-test",
+      "exitCode": 0,
+      "evidence": "45 ok, 0 FAIL | checks-vendor: self-test clean"
+    },
+    {
+      "name": "F1 after the fix: picasso's own checker (--bundle) refuses the neutered host checker",
+      "command": "node <clone@1abfdef>/tools/checks-vendor.mjs --freshness <clone> --bundle docs/gates/picasso   (from the host root)",
+      "exitCode": 1,
+      "evidence": "checks-vendor: refused: patched against upstream 1abfdef260: checks-vendor.mjs (the host copy's own --freshness still prints the forged FRESH, exit 0 — which is why WIRING and the skill now name the clone-run command)"
+    },
+    {
+      "name": "F1 after the fix: a clean bundle via the clone's checker reads FRESH; an empty --bundle refuses",
+      "command": "node <clone>/tools/checks-vendor.mjs --freshness <clone> --bundle <host>; node <clone>/tools/checks-vendor.mjs --freshness <clone> --bundle",
+      "exitCode": 1,
+      "evidence": "'checks-vendor: FRESH — the pin is <clone>'s HEAD (1abfdef260)' (exit 0) | 'checks-vendor: usage: checks-vendor.mjs --freshness <picasso-clone> [--bundle <vendored-dir>]' (exit 1)"
+    },
+    {
+      "name": "F2 after the fix: the planted quoted-comment import turns --probe RED",
+      "command": "(same plant as F2, in a clone at 1abfdef) node <clone>/tools/checks-vendor.mjs --probe",
+      "exitCode": 1,
+      "evidence": "checks-vendor: refused: probe — bundled file(s) name a module a flat host dir cannot resolve: render-report.mjs: imports '../../tools/ratchet.mjs'"
+    },
+    {
+      "name": "F3 after the fix: --export into a file refuses with a rule and a fix",
+      "command": "node <clone@1abfdef>/tools/checks-vendor.mjs --export <clone>/README.md",
+      "exitCode": 1,
+      "evidence": "checks-vendor: refused: --export needs a directory; <clone>/README.md is a file (nothing was written) | fix: name the bundle directory, e.g. --export docs/gates/picasso"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "MEDIUM",
+      "claim": "--freshness ran only from the host's own copy of the checker, so the file being judged was the judge: a neutered checks-vendor.mjs under a regenerated manifest passed bare mode AND --freshness. The design's 'closes the hand-patch plus regenerated-manifest bypass at wave intake' held for 6 of the 7 members.",
+      "found_by": "this pass (lane reviews: none supplied)",
+      "outcome": "RESOLVED",
+      "evidence": "a396ace: --freshness <clone> --bundle <dir> lets picasso's own checker judge a host dir; self-test pin RED before / GREEN after; end-to-end: 'refused: patched against upstream 1abfdef260: checks-vendor.mjs'. WIRING part A and SKILL 2a now name the clone-run command. The host-copy form still exists and is still self-certifying for the checker file — documented, not removed."
+    },
+    {
+      "id": "F2",
+      "severity": "LOW",
+      "claim": "The --probe import scan missed a multi-line import whose clause carries a line comment containing a quote (e.g. `// it's ...`), so a non-bundle relative import in render-report.mjs — the one bundled file --probe never executes — could reach hosts with the battery green.",
+      "found_by": "this pass",
+      "outcome": "RESOLVED (ceiling marked)",
+      "evidence": "a396ace: line comments with no quote before them on their line are blanked before scanning; self-test pin RED before / GREEN after; end-to-end plant now refused. First attempt (widening the clause class to [^;]) false-positived on the checker's own test prose and was reverted before commit. Remaining ceiling, marked 'ponytail:' in code: a quote inside a /* */ block comment in an import clause, or a // after a quote on the same line."
+    },
+    {
+      "id": "F3",
+      "severity": "LOW",
+      "claim": "--export into a path that is an existing file crashed with an ENOTDIR stack trace instead of a refusal with a rule and a fix (nothing was written, exit 1).",
+      "found_by": "this pass",
+      "outcome": "RESOLVED",
+      "evidence": "a396ace: 'refused: --export needs a directory; <path> is a file (nothing was written)' with a fix; self-test pin RED before / GREEN after."
+    },
+    {
+      "id": "F4",
+      "severity": "LOW",
+      "claim": "--freshness from a clone with NO fetched tip (no @{upstream}, no origin/HEAD) prints 'FRESH FOR THIS WAVE' although the clone's recency is unproven.",
+      "found_by": "this pass",
+      "outcome": "WONT-FIX (code); documented",
+      "evidence": "Justification: the tip rule is stallion's 'first fetched tip that resolves' law, mirrored on purpose (tools/checks-vendor.mjs comment above the tip loop); refusing when none resolves would refuse every detached checkout (a CI pull-request merge ref, a checkout of a sha), where neither tip exists; the verdict names the clone it judged. WIRING part A's intake step now says to pull the clone first and that a clone with no fetched upstream has nothing to be behind."
+    },
+    {
+      "id": "F5",
+      "severity": "LOW",
+      "claim": "gate-registry, given a battery carrying one undeclared invocation, also reports 14 present gates as 'missing from transport battery' with 'fix: restore the line ...' for lines that are there; the true cause is printed last.",
+      "found_by": "this pass (probe: deleted registry row)",
+      "outcome": "LEFT OPEN — pre-existing, outside this task's scope (tools/gate-registry.mjs)",
+      "evidence": "The refusal itself is real (exit 1) and names the undeclared 'node tools/checks-vendor.mjs --probe'; only the extra fix lines mislead. Needs its own task."
+    },
+    {
+      "id": "F6",
+      "severity": "MEDIUM",
+      "claim": "`node tools/task-state.mjs status` — AGENTS.md's first instruction — crashes (TypeError: Cannot read properties of undefined (reading 'padEnd')) because listTasks() parses every .tasks/*.json, including the tracked .tasks/pin-retire-feature.adversarial.json and .tasks/template-resync-pin-retire.adversarial.json; `metrics` counts those two as tasks with no phase (tasks 19 = 17 records + 2).",
+      "found_by": "this pass (cold start)",
+      "outcome": "LEFT OPEN — pre-existing since 563e476 and 8c89ff1 (which added those two files), outside this task's scope (tools/task-state.mjs, .tasks/ of other tasks)",
+      "evidence": "No gate is affected (advance/red-check load one record by id). Needs its own task: move those two findings files to docs/tasks/ or skip non-record files in listTasks."
+    }
+  ],
+  "critique": {
+    "P1 host census orphans the bundle": "implemented (00d4fd0): WIRING part A REQUIRES the docs/gates/coverage.json 'picasso-checks' gate, checked with node tools/gate-coverage.mjs",
+    "P2 plugin version in four places": "implemented (00d4fd0): all four at 0.4.0; the three manifests were added to scope before planned",
+    "P3 --probe never runs render-report": "implemented (00d4fd0): static import scan over all seven files; hardened by F2 (a396ace)",
+    "P4 regenerated manifest launders a patch; dirty check blind": "implemented (00d4fd0): --freshness compares digests to the pin's bytes; --export reads HEAD objects; completed by F1 (a396ace) so the checker file is covered too",
+    "P5 red-check evidence cannot show the reason": "implemented: each segment names its failure, trap cleans the temp dir; stored evidence verified by hand (first probe)",
+    "P6 skill mode detection": "implemented (00d4fd0): mode 2 = no picasso.json + .stallion-base or tasks/ beside tools/task-coverage.mjs (or tools/harness/); 2a = a tracked VENDOR.json with schema picasso/checks-manifest@1",
+    "P7 stale 'three ratchets'": "implemented (00d4fd0): TASK-LIFECYCLE names four; README adds console-ratchet",
+    "P8 false-provenance pin": "implemented: restamped in a separate commit after each code commit (da60072, 1abfdef); a396ace's tools/ equal template/tools/ (10 files, checked by blob id)",
+    "P9 dead template copy": "trade-off stated in AGENTS.md (00d4fd0)",
+    "P10 registry cannot see the sweep's scope; no readiness wait": "readiness wait added to the WIRING CI recipe (00d4fd0); the argv form for render-report's target is LEFT OPEN per the revised design (Phase 1 / P2 owns render-report)",
+    "P11 host hygiene": "implemented (00d4fd0): formatter/linter/knip ignores and '-text' in .gitattributes",
+    "P12 S1 misstated": "implemented (00d4fd0): WIRING states no new approval mechanism; stallion's protected-task approval applies",
+    "P13 --export robustness": "implemented (00d4fd0): toplevel, sources at HEAD, leftover check before any write; completed by F3 (a396ace)",
+    "P14 calibration": "implemented: described as 'bundled self-tests fail from paths with URL-special characters; gate runs unaffected' (00d4fd0 message)"
+  },
+  "open": [
+    "F5 and F6 (pre-existing, outside scope) — each needs its own task",
+    "F2 ceiling: a quote inside a /* */ block comment in an import clause, or a // after a quote on the same line, still hides an import from the scan",
+    "the host-copy form of --freshness still cannot certify its own checker; the clone-run form (--bundle) is the documented intake command",
+    "an argv form for render-report's target (--base-url, --routes-file) is left for the v2 host wiring (Phase 1); until then dropping ROUTES or BASE_URL from the CI line silently narrows or retargets the sweep",
+    "the non-bundled .pathname sites (tools/task-state.mjs, tools/vendor-sync.mjs and their template copies) are left: not shipped to hosts",
+    "template/VENDOR-PIN keeps its own format; the sha256 manifest is only for the checks bundle",
+    "v2's linter: lint-budget wraps only eslint and oxlint; a Biome host leaves the lint-budget row unwired (Phase 1 decision)",
+    "runtime dependency versions (playwright) are not enforced by the manifest; the host CI's render-report --self-test proves they resolve"
+  ]
+}
