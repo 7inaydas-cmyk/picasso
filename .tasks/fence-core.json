@@ -1,6 +1,6 @@
 {
   "id": "fence-core",
-  "phase": "adversarial",
+  "phase": "done",
   "riskClass": "tooling",
   "scope": [
     "tools",
@@ -61,6 +61,16 @@
     {
       "at": "2026-09-27T09:23:22.344Z",
       "to": "adversarial"
+    },
+    {
+      "at": "2026-09-27T12:27:44.211Z",
+      "to": "done"
     }
-  ]
+  ],
+  "adversarial": {
+    "findings": "docs/tasks/fence-core.adversarial.json",
+    "probes": 10,
+    "clean": true,
+    "at": "2026-09-27T12:27:44.210Z"
+  }
 }
