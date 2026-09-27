@@ -25,5 +25,7 @@ are vendored from picasso at a pinned upstream commit.
 - Read-first: `docs/context-manifest.md` lists the files that define this
   design system. Read them before writing UI code.
 - Fresh clones: `git config core.hooksPath .githooks`; verify with
-  `node tools/task-coverage.mjs --doctor`.
+  `node tools/task-coverage.mjs --doctor`. The push fence judges every commit
+  since the committed adoption base (`.picasso-base` — pin it once at adoption,
+  see picasso's docs/WIRING.md); `done` tasks authorize only their own paperwork.
 - Refusals print the rule, the evidence, and an exact fix command. Run the fix.

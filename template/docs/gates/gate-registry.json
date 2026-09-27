@@ -20,12 +20,21 @@
     },
     {
       "id": "task-coverage-push",
-      "invocation": "node tools/task-coverage.mjs --push",
+      "invocation": "node tools/task-coverage.mjs --pre-push",
       "transports": [
         "pre-push"
       ],
       "phase": "verified",
-      "checks": "every commit in range footered and in-scope"
+      "checks": "every pushed ref lies in HEAD's history; every commit since the committed adoption base (.picasso-base) re-judged: footer, in-flight task, declared scope, done-law against the settled anchor"
+    },
+    {
+      "id": "task-coverage-range",
+      "invocation": "node tools/task-coverage.mjs --base",
+      "transports": [
+        "ci"
+      ],
+      "phase": "executing",
+      "checks": "the server-side fence: CI re-judges the pushed range from the event's base (a new ref falls back to the committed adoption base) — the one fence no local bypass reaches"
     },
     {
       "id": "task-coverage-doctor",
@@ -59,7 +68,7 @@
       "id": "lint-budget-gate-script",
       "invocation": "node tools/lint-budget.mjs --check --linter eslint",
       "transports": [
-        "battery"
+        "scripts"
       ],
       "phase": "verified",
       "checks": "the npm lint script runs the capped eslint invocation"
@@ -77,7 +86,7 @@
       "id": "render-gate-console-ratchet",
       "invocation": "node tools/console-ratchet.mjs --report reports/console-report.json --baseline baselines/console-baseline.json",
       "transports": [
-        "battery"
+        "scripts"
       ],
       "phase": "verified",
       "checks": "the render:gate script judges the console report against its baseline"
@@ -86,7 +95,7 @@
       "id": "render-gate-a11y-ratchet",
       "invocation": "node tools/a11y-ratchet.mjs --violations reports/a11y-report.json --baseline baselines/a11y-baseline.json --render-failures reports/render-failures.json --render-baseline baselines/render-baseline.json",
       "transports": [
-        "battery"
+        "scripts"
       ],
       "phase": "verified",
       "checks": "the render:gate script judges axe violations and render failures against their baselines"
@@ -104,7 +113,7 @@
       "id": "budget-gate-script",
       "invocation": "node tools/size-budget.mjs --budgets budgets.json",
       "transports": [
-        "battery"
+        "scripts"
       ],
       "phase": "verified",
       "checks": "the npm budget:gate script runs the size-budget invocation"

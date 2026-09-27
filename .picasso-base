@@ -1,0 +1,5 @@
+# The picasso adoption base: history the push fence treats as settled (one
+# full sha per line). Pinned at the fence-core cutover — commits after it are
+# judged by the fence-core law (done authorizes no new code, merges and roots
+# judged, pushed refs judged).
+9177334ad362dbf7f768bed91900532680b9fce1

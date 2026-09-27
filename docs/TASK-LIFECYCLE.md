@@ -20,11 +20,23 @@ intake → planned → executing → verified → adversarial → done
 
 ## The fences
 
-- `pre-commit` (`task-coverage --staged`): staged code outside every declared scope refuses.
-- `commit-msg` (`task-coverage --commit-msg`): no/ambiguous `task:` footer, unknown task,
-  or staged code outside the named task's scope refuses.
-- `pre-push` (`task-coverage --push` + `--doctor`): every commit in the range re-judged;
-  an unresolvable push base REFUSES rather than guessing; an unwired clone refuses to push.
+- `pre-commit` (`task-coverage --staged`): staged code outside every in-flight task's
+  declared scope refuses.
+- `commit-msg` (`task-coverage --commit-msg`): the footer is read after git's comment
+  cleanup; no/ambiguous `task:` footer, unknown task, a task not in flight, or code
+  outside the named task's scope refuses. A `done` task authorizes only its own
+  paperwork (`.tasks/<id>.json`, `docs/tasks/<id>.adversarial.json`).
+- `pre-push` (`task-coverage --pre-push` + `--doctor`): a pushed ref outside HEAD's
+  history refuses; every commit the remote does not hold yet (bounded by the
+  adoption base, `.picasso-base`, read from the remote's tree) is judged — roots
+  against the empty tree, merges against git's own automatic merge of their
+  parents; a commit that introduces nothing needs no footer; an unresolvable base
+  REFUSES; an unwired clone refuses to push. Task-record changes are judged too:
+  a phase never moves backwards, a scope never changes after planned.
+  A `done` task's citations are judged against the settled anchor (`origin/<branch>`):
+  work written in flight lands with it; a new citation after it settled refuses.
+- CI (`task-coverage --base <event base>`): the same range check, server-side — the
+  one fence no local bypass reaches.
 
 ## The picasso loop (how agents ride the lifecycle)
 

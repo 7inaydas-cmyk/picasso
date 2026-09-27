@@ -29,8 +29,6 @@ import { join } from "node:path";
 import { PHASES } from "./task-coverage.mjs";
 
 const RISK_CLASSES = ["ui-runtime", "styles", "tooling", "docs"];
-// Phases under which code may land (the commit footer's task must be in one of these).
-const CODE_PHASES = ["executing", "verified", "adversarial", "done"];
 
 const tasksDir = () => process.env.PICASSO_TASKS_DIR || ".tasks";
 
@@ -107,6 +105,14 @@ function cmdScope(args) {
   const t = loadTask(id);
   if (!add) { console.log(`${id} scope:`); t.scope.forEach(s => console.log(`  ${s}`)); return; }
   if (t.scope.includes(add)) die(`scope already declares '${add}'`);
+  // A scope names where the task lands: its first segment is a literal path. A
+  // wildcard-rooted glob ('**', '*/x', '**/*.tsx') is a skeleton key, not a
+  // declared blast radius.
+  const first = add.split("/")[0];
+  if (!first || first === "." || first === ".." || /[*?[\]{}]/.test(first))
+    die(`refused: scope '${add}' is rooted in a wildcard or not a repo-relative path\n` +
+        `  rule: a scope's first segment is a literal path — one entry per top-level path the task touches\n` +
+        `  fix: node tools/task-state.mjs scope ${id} --add "<top-level-path>/**"`);
   if (!["intake", "planned"].includes(t.phase))
     die(`scope is declared at planned and append-only until then; '${id}' is at ${t.phase}`);
   t.scope.push(add);
@@ -216,6 +222,8 @@ function selfTest() {
   ok("advance refuses planned with empty scope", call(["advance", "probe"]).code !== 0);
   ok("scope add lands", call(["scope", "probe", "--add", "tools/**"]).code === 0);
   ok("scope refuses duplicates", call(["scope", "probe", "--add", "tools/**"]).code !== 0);
+  for (const g of ["**", "*", "*/src", "**/*.tsx", "{src,lib}/**"])
+    ok(`scope refuses a wildcard-rooted glob (${g}) — a skeleton key, not a scope`, call(["scope", "probe", "--add", g]).code !== 0);
   ok("advance reaches planned", call(["advance", "probe"]).code === 0);
   ok("advance reaches executing", call(["advance", "probe"]).code === 0);
   ok("scope refuses after executing", call(["scope", "probe", "--add", "docs/**"]).code !== 0);

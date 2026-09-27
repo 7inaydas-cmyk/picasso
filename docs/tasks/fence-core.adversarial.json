@@ -1,0 +1,75 @@
+{
+  "task": "fence-core",
+  "at": "2026-09-27",
+  "probes": [
+    {
+      "name": "footerless code commit is REFUSED at commit-msg",
+      "command": "echo a > src/a.ts && git add -A && git commit -qm a",
+      "exitCode": 1,
+      "evidence": "refused: no 'task: <id>' footer in the message's final trailer block\n  rule: a commit that introduces files carries a task footer in the trailer block — a 'task:' line mid-body does not bind"
+    },
+    {
+      "name": "a new commit citing a done task is REFUSED",
+      "command": "mkdir -p src && echo b > src/b.ts && git add -A && git commit -qm b -m 'task: d'",
+      "exitCode": 1,
+      "evidence": "refused: task 'd' is done — a finished task authorizes only its own paperwork, not new code\n  rule: a footer binds what the commit introduces to a task in flight and its declared scope"
+    },
+    {
+      "name": "an editor-composed message (git's comment block after the footer) binds",
+      "command": "mkdir -p src && echo c > src/c.ts && git add -A && GIT_EDITOR=/tmp/claude-1000/-home-excelsior-Desktop-stallion/339ea17b-541d-4652-8df5-1841c43957ed/scratchpad/fprobes/ed.sh git commit -q",
+      "exitCode": 0,
+      "evidence": "(silent)"
+    },
+    {
+      "name": "resurrecting a done task by editing its record is REFUSED",
+      "command": "echo '{\"id\":\"d\",\"phase\":\"executing\",\"riskClass\":\"tooling\",\"scope\":[\"src\"],\"pins\":[],\"history\":[]}' > .tasks/d.json && git add -A && git commit -qm undo -m 'task: d'",
+      "exitCode": 1,
+      "evidence": "refused: .tasks/d.json moves its phase backwards (done → executing)\n  rule: a task record's phase only moves forward and its scope is frozen after planned — task-state writes records, an editor does not"
+    },
+    {
+      "name": "pushing a branch outside HEAD's history is REFUSED",
+      "command": "git push -q origin evil",
+      "exitCode": 1,
+      "evidence": "refused: this push carries ref(s) outside the checked-out history: refs/heads/evil\n  rule: the push fence judges HEAD's history — a pushed tip HEAD cannot reach would land unjudged"
+    },
+    {
+      "name": "a clean merge (git pull) needs no footer, and the push lands",
+      "command": "git merge -q --no-ff --no-edit side && git push -q origin main",
+      "exitCode": 0,
+      "evidence": "task-coverage: doctor clean (hooksPath, hook gate lines, registry, adoption base)"
+    },
+    {
+      "name": "a merge keeping a stale side's copy over a fix is REFUSED",
+      "command": "git merge -q --no-ff --no-commit side; git checkout side -- lib/x.ts && git commit -qm merge -m 'task: t'",
+      "exitCode": 1,
+      "evidence": "refused: code outside 't' declared scope:\n    lib/x.ts"
+    },
+    {
+      "name": "a merge forged with an ancestor parent (a rollback) is REFUSED by the CI range check",
+      "command": "C=$(git commit-tree $(git rev-parse HEAD~2^{tree}) -p HEAD -p HEAD~2 -m forged -m 'task: t') && git update-ref refs/heads/main $C && node tools/task-coverage.mjs --base origin/main",
+      "exitCode": 1,
+      "evidence": "refused: 1 problem(s) in the commits this range brings\n  3a6a1eb5 (task t): code outside 't' declared scope:"
+    },
+    {
+      "name": "the first push of a new branch is judged, and lands",
+      "command": "git checkout -qb feat && echo f > src/f.ts && git add -A && git commit -qm f -m 'task: t' && git push -q -u origin feat",
+      "exitCode": 0,
+      "evidence": "task-coverage: doctor clean (hooksPath, hook gate lines, registry, adoption base)"
+    },
+    {
+      "name": "the doctor REFUSES a hook whose interpreter is not /bin/sh",
+      "command": "node tools/task-coverage.mjs --doctor",
+      "exitCode": 1,
+      "evidence": "doctor: wiring incomplete\n  .githooks/pre-commit is not '#!/bin/sh' opening with its gate line(s), exactly:"
+    }
+  ],
+  "reviews": [
+    "independent adversarial round 1 (~30 probes): 3 blockers (merge stale-copy/forged-parent rollback, PR CI on the synthetic merge commit, self-vouching task records) + 7 majors (fence judged by the pushed code, base re-pin, CI new-branch done-law, force-push base, one bad remote commit blocking every push, registry swallow forms, shebang) — all fixed except the pushed-code ceiling, documented (protect the default branch, review fence surface)",
+    "independent adversarial round 2: every round-1 fix held incl. everyday flows (pull merge, pull --rebase, revert -e, cherry-pick -x, squash, conflict merge, rebase) and the real-repo clone; 4 majors (done-then-code in one push, a merge undoing done, CI force-push fallback anchor, battery emptied) + minors — fixed and pinned by live self-tests"
+  ],
+  "open": [
+    "the fence runs the code of the commit it judges (CI) — known ceiling, documented in docs/WIRING.md: protect the default branch and require review of tools/, .githooks/, .github/, .picasso-base, docs/gates/",
+    "commit --amend can swap a footer past commit-msg (push and CI re-judge the commit); an octopus merge across two tasks is refused (judged in full); CI arguments are not pinned exactly (.github is reviewed fence surface)",
+    "task-state still honors PICASSO_TASKS_DIR / PICASSO_SELFTEST_CMD and writes .tasks relative to cwd — the lifecycle-honesty task; VENDOR-PIN lineage — its own task"
+  ]
+}

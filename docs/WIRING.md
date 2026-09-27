@@ -12,12 +12,34 @@ Verify with the doctor — it refuses an unwired clone at push time:
 node tools/task-coverage.mjs --doctor
 ```
 
-The push base resolves as: `picasso.push-base` config > the branch's upstream >
-REFUSE. A local-only clone sets an explicit base:
+The push range starts at the committed adoption base, `.picasso-base` (one full
+sha per line, read from HEAD's tree — history the fence treats as settled). No
+base, an unresolvable one, or an empty range REFUSES rather than guessing. Pin
+it once, at adoption, under a task that covers `.picasso-base`:
 
 ```sh
-git config picasso.push-base main
+git rev-parse HEAD > .picasso-base && git add .picasso-base \
+  && git commit -m 'chore: pin the picasso adoption base' -m 'task: <tooling-task>'
 ```
+
+A branch made before adoption that must merge later: add its tip as another
+line (its history is then settled, not re-judged). The base is read from the
+remote's tree, so a push cannot re-pin its own base. CI re-judges the pushed
+range server-side (`node tools/task-coverage.mjs --base <event base>`, the
+head commit checked out with `fetch-depth: 0`) — the fence a clone without
+hooks cannot skip. Pull requests merge cleanly without a footer (a clean merge
+introduces nothing); a merge that resolves conflicts carries one.
+
+**Known ceiling — protect the fence's own surface.** CI runs the fence code of
+the commit it judges, so a push that edits `tools/`, `.githooks/`, `.github/`,
+`.picasso-base` or `docs/gates/` could weaken the fence in the same change.
+Protect the default branch and require review of those paths (CODEOWNERS).
+
+**Registry carrier shapes (strict).** A declared gate counts only in its exact
+carrier: a hook line `<invocation> || exit 1`; a battery/script that is a plain
+`&&` chain; a single-line CI `run:` in a workflow `on: [push, pull_request]`
+with no `if:` and no `continue-on-error`. Commented, echoed, swallowed,
+conditional or extended lines keep nothing "present".
 
 ## The visual verification seam (blind execution is the unfenced failure mode)
 
@@ -79,7 +101,8 @@ Install: see `plugin/README.md` (ZCode registers `plugin/`; Claude Code installs
 ## Adopting the gates in a consuming front-end project
 
 1. Copy `tools/` + `.githooks/` (or vendor picasso at a pinned commit), then
-   `git config core.hooksPath .githooks`.
+   `git config core.hooksPath .githooks`, and pin the adoption base
+   (`.picasso-base`, above).
 2. Lint: install ESLint ≥9.30 (or Oxlint ≥1.80) + `@shadcn/lint` (pinned; picasso
    pins 0.1.5); configure rules and contracts; record the current warning count:
    `node tools/lint-budget.mjs --set <count>`; run CI with

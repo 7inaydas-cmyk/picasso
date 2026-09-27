@@ -4,7 +4,11 @@ jobs:
   battery:
     runs-on: ubuntu-latest
     steps:
+      # The commit itself, never GitHub's synthetic pull-request merge commit.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -12,6 +16,10 @@ jobs:
       # The design-token gate rides CI: @shadcn/lint rules under the ratchet cap.
       - run: npx eslint . --max-warnings 0
       - run: npm run selftest
+      # The server-side fence: re-judge what the event brings — a pull request
+      # from its base, a push from the ref's previous tip, a new branch from the
+      # default branch. (An unreachable base falls back to .picasso-base.)
+      - run: node tools/task-coverage.mjs --base "${{ github.event.pull_request.base.sha || (github.event.before != '0000000000000000000000000000000000000000' && github.event.before) || format('origin/{0}', github.event.repository.default_branch) }}"
       # The vendor-drift fence rides CI too: template/tools must stay byte-identical.
       - run: node tools/vendor-sync.mjs
       # Activate the committed hooks in this clone, then prove the wiring.

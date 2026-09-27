@@ -8,12 +8,20 @@ front-end brother of stallion: the same task-lifecycle law, retargeted at UI wor
   advanced one phase at a time (`intake → planned → executing → verified → adversarial → done`).
   Risk classes: `ui-runtime` (components/pages/hooks), `styles` (tokens/css),
   `tooling` (harness + build config), `docs`.
-- Commits that touch code carry a `task: <id>` footer on its own line, in the final
-  trailer block of the message.
+- Every commit that introduces files carries a `task: <id>` footer on its own
+  line, in the final trailer block of the message (editor-composed messages are
+  read after git's comment cleanup). A clean merge introduces nothing; a merge
+  is judged on what it decides beyond git's own automatic merge.
 - The footer is bound by DECLARED SCOPE: `node tools/task-state.mjs scope <id> --add "src/**"`
-  records the blast radius (declared at planned, append-only until executing). The
-  commit-msg gate refuses code staged outside it; the push fence re-judges every
-  commit in the range.
+  records the blast radius (declared at planned, append-only until executing; a
+  wildcard-rooted scope like `**` refuses). The footer's task must be in flight
+  (`executing`–`adversarial`): `done` authorizes only the task's own paperwork
+  (`.tasks/<id>.json`, `docs/tasks/<id>.adversarial.json`), never new code. Task
+  records are driven by task-state: a committed record never moves its phase
+  backwards and never changes its scope after planned.
+- The push fence judges every commit the remote does not hold yet (bounded by the
+  adoption base, `.picasso-base`) and refuses pushed refs outside HEAD's history;
+  CI re-judges the pushed range server-side.
 - `verified` needs a red-check pin (`red-check <id> --command "<failing check>"` — the
   tool runs it and refuses if it passes) AND a green run of the whole `npm run selftest`
   battery at the phase boundary; `done` needs a prepared adversarial pass (≥3 probes,

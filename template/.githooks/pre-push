@@ -1,6 +1,8 @@
 #!/bin/sh
-# The push fence: re-judge every commit in the range; an unresolvable base REFUSES.
-node tools/task-coverage.mjs --push || exit 1
+# The push fence: every pushed ref must lie in HEAD's history, and every commit
+# since the committed adoption base (.picasso-base) is re-judged; an
+# unresolvable or empty range REFUSES. git's ref lines arrive on stdin.
+node tools/task-coverage.mjs --pre-push || exit 1
 # The gate for the gate: an unwired clone refuses to push until it is wired.
 node tools/task-coverage.mjs --doctor || exit 1
 # The registry check rides the fence: declared gates must actually be wired.

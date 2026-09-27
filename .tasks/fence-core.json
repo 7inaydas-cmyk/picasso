@@ -1,0 +1,66 @@
+{
+  "id": "fence-core",
+  "phase": "adversarial",
+  "riskClass": "tooling",
+  "scope": [
+    "tools",
+    ".githooks",
+    ".github",
+    "docs",
+    ".tasks",
+    ".picasso-base",
+    "AGENTS.md",
+    "package.json",
+    "template/tools",
+    "template/.githooks",
+    "template/.github",
+    "template/docs",
+    "template/AGENTS.md",
+    "template/VENDOR-PIN",
+    "template/.picasso-base",
+    "template/package.json"
+  ],
+  "pins": [
+    {
+      "command": "node tools/task-coverage.mjs --self-test",
+      "recordedExit": 1,
+      "evidence": "  FAIL live: the doctor refuses a gate line carrying an extra flag\n  FAIL live: modes are exclusive\n  FAIL live: unknown flags refuse\ntask-coverage: 22 self-test failure(s)",
+      "at": "2026-09-27T09:17:26.087Z"
+    },
+    {
+      "command": "node tools/gate-registry.mjs --self-test",
+      "recordedExit": 1,
+      "evidence": "  FAIL a gate whose failure is swallowed does not carry the gate\n  FAIL a declared gate carrying an extra flag is a different, undeclared invocation\n  FAIL the battery is the selftest script, not any script in package.json\ngate-registry: 5 self-test failure(s)",
+      "at": "2026-09-27T09:17:26.154Z"
+    },
+    {
+      "command": "node tools/task-state.mjs --self-test",
+      "recordedExit": 1,
+      "evidence": "  ok pin-retire refuses double-retire\n  ok pin-retire skips retired pins (verified refuses with only a retired pin)\n  ok retired pin keeps its evidence and reason\ntask-state: 5 self-test failure(s)",
+      "at": "2026-09-27T09:17:27.438Z"
+    }
+  ],
+  "created": "2026-09-27T09:12:41.998Z",
+  "history": [
+    {
+      "at": "2026-09-27T09:12:41.998Z",
+      "to": "intake"
+    },
+    {
+      "at": "2026-09-27T09:12:42.470Z",
+      "to": "planned"
+    },
+    {
+      "at": "2026-09-27T09:12:42.498Z",
+      "to": "executing"
+    },
+    {
+      "at": "2026-09-27T09:23:08.397Z",
+      "to": "verified"
+    },
+    {
+      "at": "2026-09-27T09:23:22.344Z",
+      "to": "adversarial"
+    }
+  ]
+}
