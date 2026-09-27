@@ -1,0 +1,141 @@
+{
+ "task": "vendorable-checks-rereview-fixes-r2",
+ "at": "2026-09-28",
+ "lanes": "The findings came from an external re-review of vendorable-checks-rereview-fixes-r1 at 5da15ea (one MEDIUM, three LOW). This pass was run by the agent that wrote the fixes, NOT by an independent verifier; independence comes from the next reviewer. It re-runs each finding's repro against the committed fix in scratch clones of this repo (HEAD 67d507c), runs the same repro against base 5da15ea where the defect was live, probes node's own resolver for parser disagreements, runs single-line mutants of every fix line against the self-test, and probes the commit fences.",
+ "probes": [
+  {
+   "name": "MEDIUM: a committed docs/gates/package.json naming itself @axe-core/playwright refuses (drift gate), beside a genuine root install and a root package.json",
+   "command": "(host: --export docs/gates/picasso; stand-in root install at node_modules/@axe-core/playwright; package.json {name:host}; docs/gates/package.json {name:'@axe-core/playwright',exports:'./axe.mjs'}) node docs/gates/picasso/render-report.mjs | head -1; node docs/gates/picasso/checks-vendor.mjs",
+   "exitCode": 1,
+   "evidence": "render-report printed 'FORGED axe'; the drift gate printed 'self-referencing package scope: <host>/docs/gates/package.json names itself @axe-core/playwright'"
+  },
+  {
+   "name": "MEDIUM sanity: the same host under base 5da15ea's exported checker is green (the defect was live)",
+   "command": "(host exported from a clone at 5da15ea, same plant) node docs/gates/picasso/checks-vendor.mjs",
+   "exitCode": 0,
+   "evidence": "checks-vendor: OK — 7 bundled file(s) match VENDOR.json (picasso 5da15eadab)"
+  },
+  {
+   "name": "MEDIUM: the clone-run --freshness --bundle refuses the same host",
+   "command": "node <pc>/tools/checks-vendor.mjs --freshness <pc> --bundle docs/gates/picasso",
+   "exitCode": 1,
+   "evidence": "refused: the bundle diverges from VENDOR.json: self-referencing package scope: .../docs/gates/package.json names itself @axe-core/playwright"
+  },
+  {
+   "name": "MEDIUM variants: the 'playwright' name, a committed plant in a fresh clone of the host, and a forged ROOT package.json all refuse",
+   "command": "(docs/gates/package.json {name:'playwright',exports:'./pw.mjs'}; git commit; git clone host hostclone; node hostclone/docs/gates/picasso/checks-vendor.mjs; then git rm it and write the root package.json {name:'@axe-core/playwright',exports:'./docs/gates/axe.mjs'})",
+   "exitCode": 1,
+   "evidence": "(run at 82f1fb2) each refused: 'names itself playwright' (working tree and fresh clone), '<host>/package.json names itself @axe-core/playwright' (render-report printed 'FORGED axe' for the root plant)"
+  },
+  {
+   "name": "MEDIUM, found by this pass in 82f1fb2: a BOM-prefixed forged package.json read as nameless",
+   "command": "printf '\\xef\\xbb\\xbf{\"name\":\"@axe-core/playwright\",\"exports\":\"./axe.mjs\"}' > docs/gates/package.json; node docs/gates/picasso/render-report.mjs | head -1; node docs/gates/picasso/checks-vendor.mjs   (at 82f1fb2, then at HEAD)",
+   "exitCode": 1,
+   "evidence": "at 82f1fb2: render-report printed 'FORGED axe' and the drift gate exited 0 (node's reader skips the BOM, JSON.parse threw). At HEAD: 'self-referencing package scope: ... names itself playwright', exit 1. Other parser probes agreed with node at 82f1fb2: a duplicate name (node takes the last, as JSON.parse does), \\/ and \\u escapes, exports:null (node does not self-reference; the gate refuses, stricter), trailing garbage (node itself throws)"
+  },
+  {
+   "name": "MEDIUM control: a nearer package.json with another name shadows a forged farther one, and the gate agrees with node",
+   "command": "docs/gates/package.json {name:'docs-site'}; docs/package.json {name:'@axe-core/playwright',exports:'./gates/axe.mjs'}; node docs/gates/picasso/render-report.mjs | head -1; node docs/gates/picasso/checks-vendor.mjs",
+   "exitCode": 0,
+   "evidence": "render-report printed 'ROOT-INSTALL axe' (only the nearest package.json is the scope); checks-vendor: OK — 7 bundled file(s) match VENDOR.json (picasso 67d507cfac)"
+  },
+  {
+   "name": "MEDIUM: --export refuses in its own verify step over a forged scope",
+   "command": "node <pc>/tools/checks-vendor.mjs --export docs/gates/picasso   (with the forged docs/gates/package.json present)",
+   "exitCode": 1,
+   "evidence": "refused: the export does not verify: self-referencing package scope: .../docs/gates/package.json names itself @axe-core/playwright"
+  },
+  {
+   "name": "LOW (submodule): a node_modules committed at a submodule's root refuses after clone --recurse-submodules",
+   "command": "(gates repo: --export picasso + committed node_modules/@axe-core/playwright; host: git submodule add gates docs/gates; git clone --recurse-submodules host hc) node hc/docs/gates/picasso/checks-vendor.mjs",
+   "exitCode": 1,
+   "evidence": "HEAD: 'shadowing node_modules: docs/gates/node_modules', exit 1 (--freshness --bundle refuses the same). Base 5da15ea: 'checks-vendor: OK — 7 bundled file(s) match VENDOR.json (picasso 5da15eadab)', exit 0"
+  },
+  {
+   "name": "LOW (git cannot answer): a committed docs/gates/node_modules with git missing from PATH, and with an unparseable ~/.gitconfig",
+   "command": "PATH=$t/bin node docs/gates/picasso/checks-vendor.mjs   ($t/bin holds only node); HOME=$t/badhome node docs/gates/picasso/checks-vendor.mjs   (.gitconfig = '[core')",
+   "exitCode": 1,
+   "evidence": "HEAD: 'git cannot name the repo root above the bundle: git did not run' and '... fatal: bad config line 1 in file .../badhome/.gitconfig', each exit 1. Base 5da15ea: OK with exit 0 for both"
+  },
+  {
+   "name": "LOW control: a non-git host with no git on PATH still passes (the N1 ceiling is unchanged)",
+   "command": "(bundle copied into a directory with no .git anywhere above it) PATH=$t/bin node docs/gates/picasso/checks-vendor.mjs",
+   "exitCode": 0,
+   "evidence": "(run at 82f1fb2, whose shadowModules is unchanged at HEAD) checks-vendor: OK — 7 bundled file(s) match VENDOR.json (picasso 82f1fb2d85)"
+  },
+  {
+   "name": "LOW (two levels): the i > 0 -> i > 1 mutant is killed by the self-test",
+   "command": "sed 's/for (let i = parts.length - 1; i > 0; i--)/for (let i = parts.length - 1; i > 1; i--)/' tools/checks-vendor.mjs > m.mjs; node m.mjs --self-test",
+   "exitCode": 1,
+   "evidence": "FAIL a node_modules two levels above the bundle refuses too (recorded as a pin while the case was withheld: 'mutant i > 0 -> i > 1: SURVIVED')"
+  },
+  {
+   "name": "mutants: single-line mutants of every fix line, run against the self-test",
+   "command": "(M1 drop the self-reference push; M2 drop the BOM strip; M3 empty the unparseable catch; M4 drop the superproject walk; M5 git failure reads as no repo; M6 .find -> .findLast; M7 scope search starts above the bundle dir; M8 isFile() -> any entry; M9 i > 0 -> i > 1) node <mutant> --self-test",
+   "exitCode": 1,
+   "evidence": "M1-M5 and M9 killed at f61aa2b. M6 and M8 SURVIVED there: the fixture host had no root package.json, so nearest and farthest were one file. ba5ca63 gives the host a root package.json and a directory-named package.json case; M6 and M8 are then killed. M7 survives and is equivalent: a package.json in the bundle dir is already refused as 'undeclared: package.json'"
+  },
+  {
+   "name": "fence: staged code outside every in-flight task's scope is refused",
+   "command": "(scratch clone) echo '// x' >> tools/task-state.mjs; git add tools/task-state.mjs; node tools/task-coverage.mjs --staged",
+   "exitCode": 1,
+   "evidence": "task-coverage: refused: staged code outside every in-flight task's declared scope: tools/task-state.mjs"
+  },
+  {
+   "name": "fence: a message with no task footer, and one naming the done r1 task, are refused",
+   "command": "(staged in-scope tools/checks-vendor.mjs) node tools/task-coverage.mjs --commit-msg m1   (no footer); node tools/task-coverage.mjs --commit-msg m2   (task: vendorable-checks-rereview-fixes-r1)",
+   "exitCode": 1,
+   "evidence": "'refused: no 'task: <id>' footer in the message's final trailer block' and 'refused: task 'vendorable-checks-rereview-fixes-r1' is done — a finished task authorizes only its own paperwork, not new code'"
+  }
+ ],
+ "findings": [
+  {
+   "id": "F1",
+   "severity": "MEDIUM",
+   "claim": "The r1 F2 fix was incomplete: a package.json between the bundle and the repo root that names itself @axe-core/playwright or playwright and declares exports forges the package through node's self-reference (PACKAGE_SELF_RESOLVE runs before the node_modules walk), while the drift gate and --freshness --bundle stay green.",
+   "found_by": "external re-review of r1",
+   "pin": "pin 1 (self-test: 'names itself a bundled package' + the other-name control); pin 5 (BOM + unparseable); probes MEDIUM x7",
+   "outcome": "RESOLVED in 82f1fb2 + f61aa2b, test strengthened in ba5ca63: shadowModules finds the bundle's package scope the way node does (the nearest regular-file package.json, up to the filesystem root, not bounded by git), skips a UTF-8 BOM, refuses a scope it cannot parse, and refuses one named playwright or @axe-core/playwright. WIRING says so."
+  },
+  {
+   "id": "F2",
+   "severity": "LOW",
+   "claim": "The shadow walk is bounded at the submodule's root when the bundle sits in a submodule, so a node_modules committed there counts as the install and reaches CI through clone --recurse-submodules.",
+   "found_by": "external re-review of r1",
+   "pin": "pin 2 (self-test: 'submodule's root is a shadow'); probe LOW (submodule); mutant M4",
+   "outcome": "RESOLVED in 82f1fb2 (one line in a function this task rewrote): the root follows --show-superproject-working-tree to the outermost work tree. WIRING says the submodule's root is the superproject's."
+  },
+  {
+   "id": "F3",
+   "severity": "LOW",
+   "claim": "shadowModules treated every git failure as 'not a git repo', so git missing from PATH or an unparseable ~/.gitconfig turned the check off in a real git clone.",
+   "found_by": "external re-review of r1",
+   "pin": "pin 3 (self-test: 'a git that cannot answer refuses'); probes LOW (git cannot answer) + non-git control; mutant M5",
+   "outcome": "RESOLVED in 82f1fb2 (one line): when git fails and a .git sits above the bundle, the check refuses with git's first stderr line. A host with no .git above the bundle is unchanged (N1). The dubious-ownership case was not reproduced here; it takes the same non-zero exit path. WIRING now says the drift gate needs git inside a git work tree."
+  },
+  {
+   "id": "F4",
+   "severity": "LOW",
+   "claim": "Pin 2 of r1 covered only a node_modules one level above the bundle; the i > 0 -> i > 1 mutant survived the whole self-test.",
+   "found_by": "external re-review of r1",
+   "pin": "pin 4 (the mutant itself, recorded SURVIVING with the two-level case withheld, now killed)",
+   "outcome": "RESOLVED in 82f1fb2: the self-test moves the planted node_modules to docs/node_modules and requires the refusal to name it."
+  },
+  {
+   "id": "N1",
+   "severity": "LOW",
+   "claim": "The superproject step reads a failing `git rev-parse --show-superproject-working-tree` as 'no superproject', so a git that answers --show-toplevel and then fails would bound the walk at a submodule's root again.",
+   "found_by": "this pass",
+   "pin": "none",
+   "outcome": "OPEN — not reproduced (git failing between two calls on one repo); fix direction: check the call's exit code and refuse."
+  },
+  {
+   "id": "N2",
+   "severity": "LOW",
+   "claim": "Carried from r1 (N1 there): outside any git work tree, node_modules above the bundle are not checked; r1's N2 (the drift gate's fix line prints the re-vendor command for a shadow problem) and N3 (task-state status crashes on .tasks/*.adversarial.json) also still stand.",
+   "found_by": "r1's adversarial pass",
+   "pin": "none",
+   "outcome": "OPEN — unchanged by this task, not re-registered as new. The package-scope check is not bounded by git, so it does run in a non-git host."
+  }
+ ]
+}

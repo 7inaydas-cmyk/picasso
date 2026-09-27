@@ -1,6 +1,6 @@
 {
   "id": "vendorable-checks-rereview-fixes-r2",
-  "phase": "verified",
+  "phase": "done",
   "riskClass": "tooling",
   "scope": [
     "tools/checks-vendor.mjs",
@@ -57,6 +57,20 @@
     {
       "at": "2026-09-27T20:05:16.654Z",
       "to": "verified"
+    },
+    {
+      "at": "2026-09-27T20:07:24.794Z",
+      "to": "adversarial"
+    },
+    {
+      "at": "2026-09-27T20:09:28.757Z",
+      "to": "done"
     }
-  ]
+  ],
+  "adversarial": {
+    "findings": "docs/tasks/vendorable-checks-rereview-fixes-r2.adversarial.json",
+    "probes": 14,
+    "clean": true,
+    "at": "2026-09-27T20:09:28.756Z"
+  }
 }
