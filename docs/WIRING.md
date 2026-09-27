@@ -105,10 +105,11 @@ need no task at all.
   resolve upward, and a clean install replaces only the root's; in a submodule
   the root is the superproject's), and a nearest `package.json` above the bundle
   that names itself `playwright` or `@axe-core/playwright` (node resolves a bare
-  import to that package's own `exports` before it reads any `node_modules`), and
-  names the fix. Inside a git work tree it needs a git that answers: git missing,
-  an unreadable config or a dubious-ownership refusal fails it closed. Install
-  `playwright` and `@axe-core/playwright` at the repo root.
+  import to that package's own `exports` before it reads any `node_modules`; one
+  that does not parse is refused too), and names the fix. Inside a git work
+  tree it needs a git that answers: git missing, an unreadable config or a
+  dubious-ownership refusal fails it closed. Install `playwright` and
+  `@axe-core/playwright` at the repo root.
 - **Freshness** (each wave's intake), run by the picasso CLONE's checker so the
   copy being judged is never the judge (a host copy cannot certify its own
   checker), after pulling that clone:

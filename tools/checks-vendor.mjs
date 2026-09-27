@@ -129,7 +129,10 @@ function shadowModules(dir) {
   while (dirname(up.at(-1)) !== up.at(-1)) up.push(dirname(up.at(-1)));
   const scope = up.map(d => join(d, "package.json")).find(p => statSync(p, { throwIfNoEntry: false })?.isFile());
   let name;
-  try { ({ name } = JSON.parse(readFileSync(scope, "utf8"))); } catch { /* no scope, or one node itself refuses to parse */ }
+  // node's reader skips a UTF-8 BOM; anything this reader still cannot parse is
+  // refused, so no parser disagreement reads as a scope with no name.
+  if (scope) try { ({ name } = JSON.parse(readFileSync(scope, "utf8").replace(/^﻿/, ""))); }
+  catch (e) { found.push(`unparseable package scope: ${scope} (${e.message})`); }
   if (PACKAGES.includes(name)) found.push(`self-referencing package scope: ${scope} names itself ${name}`);
   const top = git(real, ["rev-parse", "--show-toplevel"]);
   if (top.code !== 0)
@@ -593,6 +596,10 @@ function gitCases(ok, tmp) {
   const r3 = run(upChecker, ["--freshness", up, "--bundle", host]);
   ok("a package.json above the bundle that names itself a bundled package refuses (drift gate and --freshness --bundle)",
     r.code === 1 && r.out.includes("docs/gates/package.json names itself @axe-core/playwright") && r3.code === 1 && r3.out.includes("self-referencing package scope"));
+  writeFileSync(pj, "﻿" + JSON.stringify({ name: "playwright", exports: "./pw.mjs" }));
+  ok("a BOM-prefixed package.json is read as node reads it (it self-references too)", run(hostChecker, []).out.includes("docs/gates/package.json names itself playwright"));
+  writeFileSync(pj, `{"name":"docs-site"} x`);
+  ok("a package scope this reader cannot parse refuses rather than reading as no name", run(hostChecker, []).out.includes("unparseable package scope"));
   writeFileSync(pj, JSON.stringify({ name: "docs-site", exports: "./x.mjs" }));
   ok("a package.json above the bundle with any other name is not a self-reference", run(hostChecker, []).code === 0);
   rmSync(pj);

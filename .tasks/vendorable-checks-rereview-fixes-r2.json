@@ -32,6 +32,12 @@
       "recordedExit": 1,
       "evidence": "mutant i > 0 -> i > 1: SURVIVED",
       "at": "2026-09-27T20:02:00.445Z"
+    },
+    {
+      "command": "r=$(node tools/checks-vendor.mjs --self-test 2>&1 | grep -E '^  (ok|FAIL) .*(BOM-prefixed package.json|cannot parse refuses)'); echo \"$r\"; [ \"$(echo \"$r\" | grep -c '^  ok')\" -eq 2 ]",
+      "recordedExit": 1,
+      "evidence": "FAIL a BOM-prefixed package.json is read as node reads it (it self-references too)\n  FAIL a package scope this reader cannot parse refuses rather than reading as no name",
+      "at": "2026-09-27T20:04:15.759Z"
     }
   ],
   "created": "2026-09-27T20:00:21.159Z",
