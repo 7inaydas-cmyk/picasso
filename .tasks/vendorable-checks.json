@@ -1,6 +1,6 @@
 {
   "id": "vendorable-checks",
-  "phase": "executing",
+  "phase": "verified",
   "riskClass": "tooling",
   "scope": [
     "tools/checks-vendor.mjs",
@@ -46,6 +46,10 @@
     {
       "at": "2026-09-27T18:33:54.434Z",
       "to": "executing"
+    },
+    {
+      "at": "2026-09-27T18:42:52.581Z",
+      "to": "verified"
     }
   ]
 }
