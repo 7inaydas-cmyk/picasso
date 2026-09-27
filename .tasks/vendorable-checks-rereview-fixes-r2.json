@@ -1,0 +1,52 @@
+{
+  "id": "vendorable-checks-rereview-fixes-r2",
+  "phase": "executing",
+  "riskClass": "tooling",
+  "scope": [
+    "tools/checks-vendor.mjs",
+    "template/tools/checks-vendor.mjs",
+    "template/VENDOR-PIN",
+    "docs/WIRING.md"
+  ],
+  "pins": [
+    {
+      "command": "r=$(node tools/checks-vendor.mjs --self-test 2>&1 | grep -E '^  (ok|FAIL) .*(names itself a bundled package|any other name is not a self-reference)'); echo \"$r\"; [ \"$(echo \"$r\" | grep -c '^  ok')\" -eq 2 ]",
+      "recordedExit": 1,
+      "evidence": "FAIL a package.json above the bundle that names itself a bundled package refuses (drift gate and --freshness --bundle)\n  ok a package.json above the bundle with any other name is not a self-reference",
+      "at": "2026-09-27T20:01:04.678Z"
+    },
+    {
+      "command": "r=$(node tools/checks-vendor.mjs --self-test 2>&1 | grep -E '^  (ok|FAIL) .*submodule.s root is a shadow'); echo \"$r\"; [ \"$(echo \"$r\" | grep -c '^  ok')\" -eq 1 ]",
+      "recordedExit": 1,
+      "evidence": "FAIL a node_modules at a submodule's root is a shadow of the superproject's install",
+      "at": "2026-09-27T20:01:07.700Z"
+    },
+    {
+      "command": "r=$(node tools/checks-vendor.mjs --self-test 2>&1 | grep -E '^  (ok|FAIL) .*a git that cannot answer refuses'); echo \"$r\"; [ \"$(echo \"$r\" | grep -c '^  ok')\" -eq 1 ]",
+      "recordedExit": 1,
+      "evidence": "FAIL inside a git work tree, a git that cannot answer refuses instead of reading as no repo",
+      "at": "2026-09-27T20:01:10.515Z"
+    },
+    {
+      "command": "t=$(mktemp -d) && sed 's/for (let i = parts.length - 1; i > 0; i--)/for (let i = parts.length - 1; i > 1; i--)/' tools/checks-vendor.mjs > \"$t/m.mjs\" && grep -q 'i > 1; i--' \"$t/m.mjs\" && ! node \"$t/m.mjs\" --self-test > \"$t/out\" 2>&1; s=$?; grep -E '^  FAIL' \"$t/out\"; echo \"mutant i > 0 -> i > 1: $([ $s -eq 0 ] && echo killed || echo SURVIVED)\"; rm -rf \"$t\"; exit $s",
+      "recordedExit": 1,
+      "evidence": "mutant i > 0 -> i > 1: SURVIVED",
+      "at": "2026-09-27T20:02:00.445Z"
+    }
+  ],
+  "created": "2026-09-27T20:00:21.159Z",
+  "history": [
+    {
+      "at": "2026-09-27T20:00:21.160Z",
+      "to": "intake"
+    },
+    {
+      "at": "2026-09-27T20:00:21.313Z",
+      "to": "planned"
+    },
+    {
+      "at": "2026-09-27T20:00:21.347Z",
+      "to": "executing"
+    }
+  ]
+}

@@ -30,7 +30,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { appendFileSync, copyFileSync, existsSync, linkSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { appendFileSync, copyFileSync, cpSync, existsSync, linkSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
@@ -115,16 +115,29 @@ function loadManifest(dir) {
   return bad ? { refusal: `${MANIFEST} is malformed: ${bad}` } : { manifest: m };
 }
 
-// Bare packages (PACKAGES) resolve up the bundle's ancestors, and a clean install
-// replaces only the root's node_modules: one between the bundle and the repo root
-// is read by no gate and runs as the real package. ponytail: outside a git repo
-// there is no root to bound the walk, so nothing above the bundle is checked.
+// A bare import (PACKAGES) resolves first to the bundle's package scope when the
+// nearest package.json above it names itself that package (node's self-reference),
+// then up the bundle's ancestors' node_modules, and a clean install replaces only
+// the root's: either one between the bundle and the repo root is read by no gate
+// and runs as the real package. The root is the OUTERMOST work tree (a submodule's
+// root is not where the host installs), and a git that cannot answer inside a work
+// tree refuses rather than reading as "no repo". ponytail: outside any git work
+// tree there is no root to bound the walk, so node_modules above the bundle go
+// unchecked there (the package scope is checked everywhere).
 function shadowModules(dir) {
-  const top = git(dir, ["rev-parse", "--show-toplevel"]);
-  if (top.code !== 0) return [];
-  const root = realpath(top.out.trim()), parts = relative(root, realpath(dir)).split(sep);
-  if (parts[0] === "..") return [];
-  const found = [];
+  const real = realpath(dir), up = [real], found = [];
+  while (dirname(up.at(-1)) !== up.at(-1)) up.push(dirname(up.at(-1)));
+  const scope = up.map(d => join(d, "package.json")).find(p => statSync(p, { throwIfNoEntry: false })?.isFile());
+  let name;
+  try { ({ name } = JSON.parse(readFileSync(scope, "utf8"))); } catch { /* no scope, or one node itself refuses to parse */ }
+  if (PACKAGES.includes(name)) found.push(`self-referencing package scope: ${scope} names itself ${name}`);
+  const top = git(real, ["rev-parse", "--show-toplevel"]);
+  if (top.code !== 0)
+    return up.some(d => existsSync(join(d, ".git"))) ? [...found, `git cannot name the repo root above the bundle: ${top.err.trim().split("\n")[0] || "git did not run"}`] : found;
+  let root = realpath(top.out.trim());
+  for (let s; (s = git(root, ["rev-parse", "--show-superproject-working-tree"]).out.trim()); ) root = realpath(s);
+  const parts = relative(root, real).split(sep);
+  if (parts[0] === "..") return found;
   for (let i = parts.length - 1; i > 0; i--) {
     const rel = [...parts.slice(0, i), "node_modules"].join("/");
     if (lstatSync(join(root, rel), { throwIfNoEntry: false })) found.push(`shadowing node_modules: ${rel}`);
@@ -190,7 +203,7 @@ function cmdDrift() {
   const problems = driftProblems(HERE, manifest);
   if (problems.length)
     die(`refused: the vendored bundle in ${HERE} diverges from ${MANIFEST} (picasso ${sha10(manifest.upstream)}):\n  ${problems.join("\n  ")}\n` +
-        `  rule: the bundle is picasso's bytes at the pin, in regular files — a host edit is a patch, a stray file is undeclared, a link is not a member, and no node_modules sits between the bundle and the repo root (remove it; the host installs ${PACKAGES.join(" and ")} at its root)`, reVendor);
+        `  rule: the bundle is picasso's bytes at the pin, in regular files — a host edit is a patch, a stray file is undeclared, a link is not a member, no node_modules sits between the bundle and the repo root and no package.json above the bundle names itself a bundled package (remove it; the host installs ${PACKAGES.join(" and ")} at its root), and inside a git work tree git must answer`, reVendor);
   console.log(`checks-vendor: OK — ${Object.keys(manifest.files).length} bundled file(s) match ${MANIFEST} (picasso ${sha10(manifest.upstream)})`);
 }
 
@@ -402,8 +415,8 @@ function gitCases(ok, tmp) {
     "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", "-c", "init.defaultBranch=main", ...args],
   { cwd, encoding: "utf8", env });
   const rev = (cwd, ref) => G(cwd, "rev-parse", ref).stdout.trim();
-  const run = (script, argv, cwd = tmp) => {
-    const r = spawnSync(process.execPath, [script, ...argv], { cwd, encoding: "utf8" });
+  const run = (script, argv, cwd = tmp, env = process.env) => {
+    const r = spawnSync(process.execPath, [script, ...argv], { cwd, encoding: "utf8", env });
     return { code: r.status, out: (r.stdout || "") + (r.stderr || "") };
   };
 
@@ -567,10 +580,35 @@ function gitCases(ok, tmp) {
   const r2 = run(upChecker, ["--freshness", up, "--bundle", host]);
   ok("a node_modules between the bundle and the repo root refuses (drift gate and --freshness --bundle)",
     r.code === 1 && r.out.includes("shadowing node_modules: docs/gates/node_modules") && r2.code === 1 && r2.out.includes("docs/gates/node_modules"));
-  rmSync(join(hostRoot, "docs", "gates", "node_modules"), { recursive: true });
+  renameSync(join(hostRoot, "docs", "gates", "node_modules"), join(hostRoot, "docs", "node_modules"));
+  ok("a node_modules two levels above the bundle refuses too", run(hostChecker, []).out.includes("shadowing node_modules: docs/node_modules"));
+  rmSync(join(hostRoot, "docs", "node_modules"), { recursive: true });
   mkdirSync(join(hostRoot, "node_modules", "playwright"), { recursive: true });
   ok("the repo root's own node_modules is the install, not a shadow", run(hostChecker, []).code === 0);
+  // Node resolves a bare specifier to the nearest package.json's own exports when
+  // it names itself that package, before it reads any node_modules.
+  const pj = join(hostRoot, "docs", "gates", "package.json");
+  writeFileSync(pj, JSON.stringify({ name: "@axe-core/playwright", exports: "./axe.mjs" }));
+  r = run(hostChecker, []);
+  const r3 = run(upChecker, ["--freshness", up, "--bundle", host]);
+  ok("a package.json above the bundle that names itself a bundled package refuses (drift gate and --freshness --bundle)",
+    r.code === 1 && r.out.includes("docs/gates/package.json names itself @axe-core/playwright") && r3.code === 1 && r3.out.includes("self-referencing package scope"));
+  writeFileSync(pj, JSON.stringify({ name: "docs-site", exports: "./x.mjs" }));
+  ok("a package.json above the bundle with any other name is not a self-reference", run(hostChecker, []).code === 0);
+  rmSync(pj);
+  const noGit = join(tmp, "no git"); mkdirSync(noGit);
+  r = run(hostChecker, [], tmp, { ...process.env, PATH: noGit });
+  ok("inside a git work tree, a git that cannot answer refuses instead of reading as no repo", r.code === 1 && r.out.includes("git cannot name the repo root"));
   rmSync(join(hostRoot, "node_modules"), { recursive: true }); rmSync(join(hostRoot, ".git"), { recursive: true });
+
+  // A submodule's root is not the install: the superproject's is.
+  const gates = join(tmp, "gates"), superHost = join(tmp, "super host");
+  cpSync(host, join(gates, "picasso"), { recursive: true });
+  mkdirSync(join(gates, "node_modules", "playwright"), { recursive: true }); writeFileSync(join(gates, "node_modules", "playwright", "index.js"), "x\n");
+  G(gates, "init", "-q"); G(gates, "add", "-A"); G(gates, "commit", "-qm", "gates");
+  mkdirSync(superHost); G(superHost, "init", "-q"); G(superHost, "-c", "protocol.file.allow=always", "submodule", "add", "-q", gates, "docs/gates");
+  r = run(join(superHost, "docs", "gates", "picasso", "checks-vendor.mjs"), []);
+  ok("a node_modules at a submodule's root is a shadow of the superproject's install", r.code === 1 && r.out.includes("shadowing node_modules: docs/gates/node_modules"));
 
   // A hard-linked member is a regular file; the repair must not write through it.
   const hardTool = join(hostRoot, "hard-tool.mjs"), hardJson = join(hostRoot, "hard.json");

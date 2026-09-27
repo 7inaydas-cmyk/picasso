@@ -100,10 +100,15 @@ need no task at all.
 - **Drift gate** (host battery): `node docs/gates/picasso/checks-vendor.mjs`,
   from any cwd — refuses a missing or malformed manifest, an undeclared file, a
   deleted file or a patched one, any entry that is not a regular file (a
-  symlink runs its target, whose `./ratchet.mjs` no gate reads), and any
+  symlink runs its target, whose `./ratchet.mjs` no gate reads), any
   `node_modules` between the bundle and the repo root (the bundle's bare imports
-  resolve upward, and a clean install replaces only the root's), and names the
-  fix. Install `playwright` and `@axe-core/playwright` at the repo root.
+  resolve upward, and a clean install replaces only the root's; in a submodule
+  the root is the superproject's), and a nearest `package.json` above the bundle
+  that names itself `playwright` or `@axe-core/playwright` (node resolves a bare
+  import to that package's own `exports` before it reads any `node_modules`), and
+  names the fix. Inside a git work tree it needs a git that answers: git missing,
+  an unreadable config or a dubious-ownership refusal fails it closed. Install
+  `playwright` and `@axe-core/playwright` at the repo root.
 - **Freshness** (each wave's intake), run by the picasso CLONE's checker so the
   copy being judged is never the judge (a host copy cannot certify its own
   checker), after pulling that clone:
@@ -117,7 +122,7 @@ need no task at all.
 - **Host dependencies**: `playwright` pinned exactly (picasso pins `1.63.0`) and
   `@axe-core/playwright`; chromium via
   `npx playwright install chromium --with-deps`. Everything else runs on node
-  alone (`--freshness` also needs git).
+  alone, plus git: `--freshness` always, the drift gate inside a git work tree.
 - **Baselines** live in the host's `docs/gates/` and start as `[]`:
   `console-baseline.json`, `a11y-baseline.json`, `render-baseline.json`. An a11y
   entry's identity is route + rule + selector + impact.
