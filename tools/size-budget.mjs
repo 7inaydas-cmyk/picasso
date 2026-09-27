@@ -39,23 +39,27 @@ export function checkSizes(budgets, measure) {
   return problems;
 }
 
-// A wildcard budget (hashed outputs: dist/assets/*.js) sums every match; zero
-// matches is MISSING, not zero — no JS emitted is a regression, not a pass. A
-// directory sums every file beneath it (its own stat size is the inode's).
+// A directory sums every file beneath it (its own stat size is the inode's).
+function measureOne(path) {
+  let st;
+  try { st = statSync(path); } catch { return null; }
+  if (!st.isDirectory()) return st.size;
+  const sizes = readdirSync(path, { recursive: true }).map(f => statSync(join(path, f), { throwIfNoEntry: false })).filter(s => s?.isFile()).map(s => s.size);
+  return sizes.length ? sizes.reduce((a, b) => a + b, 0) : null;
+}
+
+// A wildcard budget (hashed outputs: dist/assets/*.js) sums every match, each
+// measured as a plain entry would be (a matched directory is its files); zero
+// measurable matches is MISSING, not zero — no JS emitted is a regression.
 export function measurePath(path) {
-  if (!path.includes("*")) {
-    let st;
-    try { st = statSync(path); } catch { return null; }
-    if (!st.isDirectory()) return st.size;
-    const sizes = readdirSync(path, { recursive: true }).map(f => statSync(join(path, f), { throwIfNoEntry: false })).filter(s => s?.isFile()).map(s => s.size);
-    return sizes.length ? sizes.reduce((a, b) => a + b, 0) : null;
-  }
+  if (!path.includes("*")) return measureOne(path);
   const dir = dirname(path);
   const re = globToRegex(basename(path));
   let total = 0, found = false;
   try {
     for (const f of readdirSync(dir)) {
-      if (re.test(f)) { found = true; total += statSync(join(dir, f)).size; }
+      const size = re.test(f) ? measureOne(join(dir, f)) : null;
+      if (size !== null) { found = true; total += size; }
     }
   } catch { return null; }
   return found ? total : null;
@@ -106,6 +110,7 @@ function selfTest() {
   mkdirSync(join(dir, "assets", "nested"));
   writeFileSync(join(dir, "assets", "nested", "c-3.js"), "z".repeat(25));
   ok("a directory budget sums every file beneath it", measurePath(join(dir, "assets")) === 175);
+  ok("a wildcard matching a directory sums its files, never its inode", measurePath(join(dir, "assets/*")) === 175);
   mkdirSync(join(dir, "empty"));
   ok("a directory budget with no files is missing", measurePath(join(dir, "empty")) === null);
 

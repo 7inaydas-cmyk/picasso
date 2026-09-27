@@ -99,9 +99,11 @@ need no task at all.
 
 - **Drift gate** (host battery): `node docs/gates/picasso/checks-vendor.mjs`,
   from any cwd — refuses a missing or malformed manifest, an undeclared file, a
-  deleted file or a patched one, and any entry that is not a regular file (a
-  symlink runs its target, whose `./ratchet.mjs` no gate reads), and names the
-  re-vendor command.
+  deleted file or a patched one, any entry that is not a regular file (a
+  symlink runs its target, whose `./ratchet.mjs` no gate reads), and any
+  `node_modules` between the bundle and the repo root (the bundle's bare imports
+  resolve upward, and a clean install replaces only the root's), and names the
+  fix. Install `playwright` and `@axe-core/playwright` at the repo root.
 - **Freshness** (each wave's intake), run by the picasso CLONE's checker so the
   copy being judged is never the judge (a host copy cannot certify its own
   checker), after pulling that clone:

@@ -83,9 +83,9 @@ Four ratchet gates ship with picasso; each is deterministic-exit-code and self-t
    route (identity: route + first line of text; the render sweep writes the report):
    a new error fails, a resolved one must be `--prune`d.
 4. **size-budget** — `budgets.json` maxBytes per built artifact (a file, a directory —
-   every file beneath it summed — or a `*` glob); over budget fails, missing artifacts
-   fail, an empty budget list is refused, `--tighten` ratchets declared caps down to
-   measured sizes.
+   every file beneath it summed — or a `*` glob, each match measured the same way);
+   over budget fails, missing artifacts fail, an empty budget list is refused,
+   `--tighten` ratchets declared caps down to measured sizes.
 
 The render sweep and the four ratchets also ship as a vendorable bundle
 (`tools/checks-vendor.mjs --export`, see WIRING.md) — sha256-manifested and

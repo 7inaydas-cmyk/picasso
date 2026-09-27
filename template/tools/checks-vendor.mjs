@@ -30,10 +30,10 @@
  */
 
 import { createHash } from "node:crypto";
-import { appendFileSync, copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { appendFileSync, copyFileSync, existsSync, linkSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SCHEMA = "picasso/checks-manifest@1";
@@ -115,9 +115,26 @@ function loadManifest(dir) {
   return bad ? { refusal: `${MANIFEST} is malformed: ${bad}` } : { manifest: m };
 }
 
+// Bare packages (PACKAGES) resolve up the bundle's ancestors, and a clean install
+// replaces only the root's node_modules: one between the bundle and the repo root
+// is read by no gate and runs as the real package. ponytail: outside a git repo
+// there is no root to bound the walk, so nothing above the bundle is checked.
+function shadowModules(dir) {
+  const top = git(dir, ["rev-parse", "--show-toplevel"]);
+  if (top.code !== 0) return [];
+  const root = realpath(top.out.trim()), parts = relative(root, realpath(dir)).split(sep);
+  if (parts[0] === "..") return [];
+  const found = [];
+  for (let i = parts.length - 1; i > 0; i--) {
+    const rel = [...parts.slice(0, i), "node_modules"].join("/");
+    if (lstatSync(join(root, rel), { throwIfNoEntry: false })) found.push(`shadowing node_modules: ${rel}`);
+  }
+  return found;
+}
+
 // Divergence in every direction: a stray file, a deleted one, a changed one.
 function driftProblems(dir, manifest) {
-  const problems = walk(dir).filter(rel => rel !== MANIFEST && !Object.hasOwn(manifest.files, rel)).map(rel => `undeclared: ${rel}`);
+  const problems = [...shadowModules(dir), ...walk(dir).filter(rel => rel !== MANIFEST && !Object.hasOwn(manifest.files, rel)).map(rel => `undeclared: ${rel}`)];
   if (irregular(join(dir, MANIFEST))) problems.push(`not a regular file: ${MANIFEST}`);
   for (const [name, { sha256: want }] of Object.entries(manifest.files)) {
     const p = join(dir, name);
@@ -135,11 +152,11 @@ function writeBundle(dir, upstream, bytesOf) {
   const files = {};
   for (const [name, source] of Object.entries(BUNDLE)) {
     const bytes = bytesOf(source);
-    writeFileSync(join(dir, name), bytes);
+    rmSync(join(dir, name), { force: true }); writeFileSync(join(dir, name), bytes); // a fresh inode: never through a hard link
     files[name] = { source, sha256: sha256(bytes) };
   }
   const manifest = { schema: SCHEMA, upstream, files };
-  writeFileSync(join(dir, MANIFEST), JSON.stringify(manifest, null, 2) + "\n");
+  rmSync(join(dir, MANIFEST), { force: true }); writeFileSync(join(dir, MANIFEST), JSON.stringify(manifest, null, 2) + "\n");
   return manifest;
 }
 
@@ -173,7 +190,7 @@ function cmdDrift() {
   const problems = driftProblems(HERE, manifest);
   if (problems.length)
     die(`refused: the vendored bundle in ${HERE} diverges from ${MANIFEST} (picasso ${sha10(manifest.upstream)}):\n  ${problems.join("\n  ")}\n` +
-        `  rule: the bundle is picasso's bytes at the pin, in regular files — a host edit is a patch, a stray file is undeclared, a link is not a member`, reVendor);
+        `  rule: the bundle is picasso's bytes at the pin, in regular files — a host edit is a patch, a stray file is undeclared, a link is not a member, and no node_modules sits between the bundle and the repo root (remove it; the host installs ${PACKAGES.join(" and ")} at its root)`, reVendor);
   console.log(`checks-vendor: OK — ${Object.keys(manifest.files).length} bundled file(s) match ${MANIFEST} (picasso ${sha10(manifest.upstream)})`);
 }
 
@@ -539,6 +556,30 @@ function gitCases(ok, tmp) {
   G(up, "reset", "-q", "--hard", c2);
   writeFileSync(join(host, "a11y-ratchet.mjs"), "// tools/a11y-ratchet.mjs v1\n");
   writeFileSync(join(host, MANIFEST), JSON.stringify(manifest));
+
+  // Bare packages resolve up the bundle's ancestors: a forged package one level
+  // above the bundle is read by no gate and survives a clean install.
+  const hostRoot = join(tmp, "host");
+  G(hostRoot, "init", "-q");
+  const forged = join(hostRoot, "docs", "gates", "node_modules", "@axe-core", "playwright");
+  mkdirSync(forged, { recursive: true }); writeFileSync(join(forged, "index.js"), "export default class {}\n");
+  r = run(hostChecker, []);
+  const r2 = run(upChecker, ["--freshness", up, "--bundle", host]);
+  ok("a node_modules between the bundle and the repo root refuses (drift gate and --freshness --bundle)",
+    r.code === 1 && r.out.includes("shadowing node_modules: docs/gates/node_modules") && r2.code === 1 && r2.out.includes("docs/gates/node_modules"));
+  rmSync(join(hostRoot, "docs", "gates", "node_modules"), { recursive: true });
+  mkdirSync(join(hostRoot, "node_modules", "playwright"), { recursive: true });
+  ok("the repo root's own node_modules is the install, not a shadow", run(hostChecker, []).code === 0);
+  rmSync(join(hostRoot, "node_modules"), { recursive: true }); rmSync(join(hostRoot, ".git"), { recursive: true });
+
+  // A hard-linked member is a regular file; the repair must not write through it.
+  const hardTool = join(hostRoot, "hard-tool.mjs");
+  writeFileSync(hardTool, "host-owned\n");
+  rmSync(join(host, "ratchet.mjs")); linkSync(hardTool, join(host, "ratchet.mjs"));
+  r = exp();
+  ok("export over a hard-linked member replaces the entry and leaves the linked host file alone",
+    r.code === 0 && readFileSync(hardTool, "utf8") === "host-owned\n" && run(hostChecker, []).code === 0);
+  rmSync(hardTool);
 
   rmSync(join(host, MANIFEST));
   r = run(hostChecker, []);
