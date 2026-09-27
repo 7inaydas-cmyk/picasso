@@ -73,7 +73,8 @@ Four ratchet gates ship with picasso; each is deterministic-exit-code and self-t
    no-arbitrary-values, no-inline-styles, no-unknown-classes, require-static-classes)
    with per-component contracts. In picasso itself the gate is declared in the registry's
    `ci` transport (`.github/workflows/selftest.yml`): `npx eslint . --max-warnings 0`.
-2. **a11y-ratchet** — committed violation baseline (GSA pattern: new violations fail;
+2. **a11y-ratchet** — committed violation baseline (identity: route + rule + selector +
+   impact; GSA pattern: new violations fail;
    resolved entries must be `--prune`ed; the parallel render-failures ratchet
    (`--render-failures` + `--render-baseline`) catches stories that fail to render at
    all). Adoption includes the GSA sanity probe: plant a canary violation once and
@@ -81,8 +82,10 @@ Four ratchet gates ship with picasso; each is deterministic-exit-code and self-t
 3. **console-ratchet** — committed baseline of what the browser console says per
    route (identity: route + first line of text; the render sweep writes the report):
    a new error fails, a resolved one must be `--prune`d.
-4. **size-budget** — `budgets.json` maxBytes per built artifact; over budget fails,
-   missing artifacts fail, `--tighten` ratchets caps down to measured sizes.
+4. **size-budget** — `budgets.json` maxBytes per built artifact (a file, a directory —
+   every file beneath it summed — or a `*` glob); over budget fails, missing artifacts
+   fail, an empty budget list is refused, `--tighten` ratchets declared caps down to
+   measured sizes.
 
 The render sweep and the four ratchets also ship as a vendorable bundle
 (`tools/checks-vendor.mjs --export`, see WIRING.md) — sha256-manifested and

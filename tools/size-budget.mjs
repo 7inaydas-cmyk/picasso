@@ -40,10 +40,15 @@ export function checkSizes(budgets, measure) {
 }
 
 // A wildcard budget (hashed outputs: dist/assets/*.js) sums every match; zero
-// matches is MISSING, not zero — no JS emitted is a regression, not a pass.
+// matches is MISSING, not zero — no JS emitted is a regression, not a pass. A
+// directory sums every file beneath it (its own stat size is the inode's).
 export function measurePath(path) {
   if (!path.includes("*")) {
-    try { return statSync(path).size; } catch { return null; }
+    let st;
+    try { st = statSync(path); } catch { return null; }
+    if (!st.isDirectory()) return st.size;
+    const sizes = readdirSync(path, { recursive: true }).map(f => statSync(join(path, f), { throwIfNoEntry: false })).filter(s => s?.isFile()).map(s => s.size);
+    return sizes.length ? sizes.reduce((a, b) => a + b, 0) : null;
   }
   const dir = dirname(path);
   const re = globToRegex(basename(path));
@@ -97,6 +102,19 @@ function selfTest() {
   ok("wildcard budget sums all matches", measurePath(join(dir, "assets/*.js")) === 150);
   ok("wildcard with no matches is missing", measurePath(join(dir, "assets/*.css")) === null);
   ok("exact path still measures one file", measurePath(app) === 1000);
+  // A directory's own stat size is its inode (4096 on ext4), not its contents.
+  mkdirSync(join(dir, "assets", "nested"));
+  writeFileSync(join(dir, "assets", "nested", "c-3.js"), "z".repeat(25));
+  ok("a directory budget sums every file beneath it", measurePath(join(dir, "assets")) === 175);
+  mkdirSync(join(dir, "empty"));
+  ok("a directory budget with no files is missing", measurePath(join(dir, "empty")) === null);
+
+  // A budget list that names nothing is a gate that can never fail.
+  for (const [what, body] of [["an empty budget list", { budgets: [] }], ["a bare array", []], ["an object with no budgets", {}]]) {
+    writeFileSync(budgetsFile, JSON.stringify(body));
+    const r = run([]);
+    ok(`${what} refuses with a rule, not a green over nothing`, r.code === 1 && r.out.includes("declares no budgets"));
+  }
 
   rmSync(dir, { recursive: true, force: true });
   console.log(failures.length ? `size-budget: ${failures.length} self-test failure(s)` : "size-budget: self-test clean");
@@ -112,7 +130,10 @@ else {
   const budgetsFile = args[args.indexOf("--budgets") + 1];
   if (!budgetsFile || !existsSync(budgetsFile))
     die(`refused: budgets file missing (${budgetsFile ?? "none given"})\n  fix: declare { budgets: [{ path, maxBytes }] } and commit it`);
-  const budgets = JSON.parse(readFileSync(budgetsFile, "utf8")).budgets;
+  const budgets = JSON.parse(readFileSync(budgetsFile, "utf8"))?.budgets;
+  if (!Array.isArray(budgets) || budgets.length === 0)
+    die(`refused: ${budgetsFile} declares no budgets — a size gate over nothing is green by construction and can never fail\n` +
+        `  fix: declare { "budgets": [{ "path": "dist/assets/*.js", "maxBytes": <a generous cap> }] }, build, then --tighten (it lowers declared caps; it adds none)`);
   const problems = checkSizes(budgets, measurePath);
   if (problems.length) die(problems.join("\n"));
   if (args.includes("--tighten")) {

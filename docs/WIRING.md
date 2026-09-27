@@ -84,8 +84,8 @@ directory — `render-report.mjs`, `ratchet.mjs`, `console-ratchet.mjs`,
 `upstream` (the picasso commit) and a `source` + `sha256` per file. The bundle is
 atomic: a manifest naming more or fewer files is refused. Export from a PUSHED
 picasso checkout — the bytes come from HEAD's objects (a local edit is warned
-about, never exported) and an unpushed HEAD is refused, so the pin stays
-findable:
+about, never exported) and a HEAD no remote-tracking ref of `origin` contains
+is refused (a throwaway remote does not count), so the pin stays findable:
 
 ```sh
 # from the host repo's root
@@ -99,26 +99,34 @@ need no task at all.
 
 - **Drift gate** (host battery): `node docs/gates/picasso/checks-vendor.mjs`,
   from any cwd — refuses a missing or malformed manifest, an undeclared file, a
-  deleted file or a patched one, and names the re-vendor command.
+  deleted file or a patched one, and any entry that is not a regular file (a
+  symlink runs its target, whose `./ratchet.mjs` no gate reads), and names the
+  re-vendor command.
 - **Freshness** (each wave's intake), run by the picasso CLONE's checker so the
   copy being judged is never the judge (a host copy cannot certify its own
   checker), after pulling that clone:
   `node <picasso-clone>/tools/checks-vendor.mjs --freshness <picasso-clone> --bundle docs/gates/picasso` —
   refuses when the manifest's digests are not picasso's bytes at its own pin
   (`patched against upstream`: a hand patch under a regenerated manifest, the
-  checker included), when picasso moved a bundled source past the pin, or when
-  the clone is behind the pin or behind its own fetched upstream. A clone with
-  no fetched upstream at all has nothing to be behind — pull it first.
+  checker included), when the pin is on no remote-tracking ref of `origin` (a
+  commit only the intake clone holds launders a patch as well as a regenerated
+  manifest does), when picasso moved a bundled source past the pin, or when the
+  clone is behind the pin or behind its own fetched upstream.
 - **Host dependencies**: `playwright` pinned exactly (picasso pins `1.63.0`) and
   `@axe-core/playwright`; chromium via
   `npx playwright install chromium --with-deps`. Everything else runs on node
   alone (`--freshness` also needs git).
 - **Baselines** live in the host's `docs/gates/` and start as `[]`:
-  `console-baseline.json`, `a11y-baseline.json`, `render-baseline.json`; plus
-  `size-budgets.json` (`--tighten` after the first build) and, for an ESLint or
-  Oxlint host only, `lint-budget.json` (lint-budget wraps no other linter).
+  `console-baseline.json`, `a11y-baseline.json`, `render-baseline.json`. An a11y
+  entry's identity is route + rule + selector + impact.
+- **Budgets are not a baseline**: `size-budgets.json` starts as
+  `{ "budgets": [{ "path": "<a built file, directory or dist/assets/*.js glob>", "maxBytes": <a generous cap> }] }`
+  — an empty list is refused — and `--tighten` after the first build lowers the
+  declared caps to measured sizes (it adds no entry). For an ESLint or Oxlint
+  host only, `lint-budget.json` (lint-budget wraps no other linter).
   **Canary probe:** before trusting a green run, plant one console error and one
-  a11y violation and watch each gate FAIL.
+  a11y violation on a route that has none, lower one size cap below its
+  artifact, and watch each gate FAIL.
 - `reports/ui/` is gitignored.
 - **Never add `picasso.json`** to such a host: beside stallion's
   `tools/task-coverage.mjs` it would arm picasso's plugin against stallion's law.
@@ -145,13 +153,22 @@ mode does not wait, so a sweep that races the server flakes red:
 - run: <start the app> &
 - run: for i in $(seq 1 60); do curl -fsS http://127.0.0.1:<port>/ >/dev/null && exit 0; sleep 1; done; exit 1
 - run: node docs/gates/picasso/render-report.mjs --self-test
-- run: BASE_URL=http://127.0.0.1:<port> ROUTES="/, /feed, /watch" ROOT_SELECTOR=body REPORT_DIR=reports/ui node docs/gates/picasso/render-report.mjs
+- run: BASE_URL=http://127.0.0.1:<port> ROUTES="/, /feed, /watch" ROOT_SELECTOR=<the app root, e.g. #root> REPORT_DIR=reports/ui node docs/gates/picasso/render-report.mjs
 - run: node docs/gates/picasso/console-ratchet.mjs --report reports/ui/console-report.json --baseline docs/gates/console-baseline.json
 - run: node docs/gates/picasso/a11y-ratchet.mjs --violations reports/ui/a11y-report.json --baseline docs/gates/a11y-baseline.json --render-failures reports/ui/render-failures.json --render-baseline docs/gates/render-baseline.json
 - run: node docs/gates/picasso/size-budget.mjs --budgets docs/gates/size-budgets.json
 # ESLint/Oxlint hosts only:
 - run: PICASSO_LINT_BUDGET=docs/gates/lint-budget.json node docs/gates/picasso/lint-budget.mjs --check --linter eslint
 ```
+
+`ROOT_SELECTOR` names the element the app renders INTO: a route whose root is
+still empty after a short poll is a render failure. `body` always carries
+content, so under `body` an app root that never renders is NOT a render failure
+(only HTTP >= 400 and navigation errors are) — use it only for a server-rendered
+host whose content is in the HTML itself. Each route is held open `SETTLE_MS`
+(default 2000) after `load` before axe runs; a console error, failing request or
+mounted element later than that is not recorded — raise it for a route that
+fails late.
 
 The registry carries the sweep line with or without its env prefix: dropping
 `ROUTES` narrows the sweep to `/`, dropping `BASE_URL` turns render-report back
@@ -184,6 +201,7 @@ fences; picasso contributes its front-end gate discipline, run from a picasso
 checkout against the running site — nothing is vendored into the host repo:
 
 ```sh
+# ROOT_SELECTOR=body: Antitube is server-rendered (part A says what body gives up)
 BASE_URL=https://antitube.tv ROUTES="/, /feed, /watch" ROOT_SELECTOR=body \
   REPORT_DIR=<dir> node <picasso>/template/scripts/render-report.mjs
 node <picasso>/tools/console-ratchet.mjs --report <dir>/console-report.json --baseline <console-baseline.json>

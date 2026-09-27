@@ -30,7 +30,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { appendFileSync, copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -73,12 +73,20 @@ function git(cwd, args, encoding = "utf8") {
 const zlist = s => String(s).split("\0").filter(Boolean);
 const realpath = p => { try { return realpathSync(p); } catch { return p; } };
 
-// Every file under dir, relative, subdirectories included ('/'-joined).
+// Every entry under dir, relative, subdirectories included ('/'-joined). Dirents
+// are lstat-typed: a symlink is an entry of its own, never followed.
 function walk(dir, prefix = "") {
   if (!existsSync(dir)) return [];
   return readdirSync(dir, { withFileTypes: true }).flatMap(e =>
     e.isDirectory() ? walk(join(dir, e.name), `${prefix}${e.name}/`) : [`${prefix}${e.name}`]);
 }
+// A member must be a regular file: node runs a symlink's TARGET and resolves its
+// ./ratchet.mjs beside it, where no gate reads; a write through one lands outside.
+const irregular = p => { try { return !lstatSync(p).isFile(); } catch { return false; } };
+// The pin's home is picasso's remote: a commit no origin ref holds lives only in
+// this clone. ponytail: a hand-forged refs/remotes/origin/* is operator input,
+// the same class as a clone with no fetched tip (F4).
+const onOrigin = (cwd, rev) => git(cwd, ["for-each-ref", "--contains", rev, "--format=%(refname)", "refs/remotes/origin/"]).out.trim() !== "";
 
 function shapeRefusal(m) {
   if (!m || typeof m !== "object" || Array.isArray(m)) return "the manifest is not a JSON object";
@@ -110,8 +118,10 @@ function loadManifest(dir) {
 // Divergence in every direction: a stray file, a deleted one, a changed one.
 function driftProblems(dir, manifest) {
   const problems = walk(dir).filter(rel => rel !== MANIFEST && !Object.hasOwn(manifest.files, rel)).map(rel => `undeclared: ${rel}`);
+  if (irregular(join(dir, MANIFEST))) problems.push(`not a regular file: ${MANIFEST}`);
   for (const [name, { sha256: want }] of Object.entries(manifest.files)) {
     const p = join(dir, name);
+    if (irregular(p)) { problems.push(`not a regular file: ${name}`); continue; }
     if (!existsSync(p)) { problems.push(`deleted: ${name}`); continue; }
     let got = null;
     try { got = sha256(readFileSync(p)); } catch { /* unreadable reads as patched */ }
@@ -163,7 +173,7 @@ function cmdDrift() {
   const problems = driftProblems(HERE, manifest);
   if (problems.length)
     die(`refused: the vendored bundle in ${HERE} diverges from ${MANIFEST} (picasso ${sha10(manifest.upstream)}):\n  ${problems.join("\n  ")}\n` +
-        `  rule: the bundle is picasso's bytes at the pin — a host edit is a patch, a stray file is undeclared`, reVendor);
+        `  rule: the bundle is picasso's bytes at the pin, in regular files — a host edit is a patch, a stray file is undeclared, a link is not a member`, reVendor);
   console.log(`checks-vendor: OK — ${Object.keys(manifest.files).length} bundled file(s) match ${MANIFEST} (picasso ${sha10(manifest.upstream)})`);
 }
 
@@ -178,13 +188,16 @@ function cmdExport(target) {
         `node <picasso-checkout>/tools/checks-vendor.mjs --export ${dir}`);
   const absent = Object.values(BUNDLE).filter(src => git(ROOT, ["cat-file", "-e", `HEAD:${src}`]).code !== 0);
   if (absent.length) die(`refused: bundle source(s) absent at HEAD: ${absent.join(", ")}`, "export from a picasso commit that carries the whole bundle");
-  const remote = git(ROOT, ["branch", "-r", "--contains", "HEAD"]);
-  if (remote.code !== 0 || !remote.out.trim())
-    die("refused: HEAD is on no remote-tracking ref — --freshness could never find this pin", "push picasso (git push), then export");
+  if (!onOrigin(ROOT, "HEAD"))
+    die("refused: HEAD is on no remote-tracking ref of origin — --freshness could never find this pin (a throwaway remote does not count)", "push picasso to origin (git push), then export");
   const leftovers = walk(dir).filter(rel => rel !== MANIFEST && !Object.hasOwn(BUNDLE, rel));
   if (leftovers.length)
     die(`refused: ${dir} holds files outside the bundle (nothing was written):\n  ${leftovers.join("\n  ")}`,
         "remove them by hand (a file that left the bundle upstream, or a host file), then re-run the export");
+  const links = [...Object.keys(BUNDLE), MANIFEST].filter(n => irregular(join(dir, n)));
+  if (links.length)
+    die(`refused: ${dir} holds bundle names that are not regular files (nothing was written — a write would land THROUGH them):\n  ${links.join("\n  ")}`,
+        "remove them by hand (a symlink or a directory), then re-run the export");
   const dirty = zlist(git(ROOT, ["status", "--porcelain", "-z", "--", ...Object.values(BUNDLE)]).out);
   if (dirty.length) console.warn(`checks-vendor: warning — local edits are NOT exported (the bundle is HEAD's bytes):\n  ${dirty.join("\n  ")}`);
   const head = git(ROOT, ["rev-parse", "HEAD"]).out.trim();
@@ -217,6 +230,9 @@ function cmdFreshness(target, bundle) {
   if (g(["rev-parse", "--show-toplevel"]).code !== 0) die(`refused: ${clone} is not a git clone of picasso`, "point --freshness at a picasso clone");
   if (g(["cat-file", "-e", `${pin}^{commit}`]).code !== 0)
     die(`refused: the pin ${sha10(pin)} is not a commit in ${clone} — a verdict from a tree that cannot see the pin is a guess`, `git -C ${clone} pull --ff-only`);
+  if (!onOrigin(clone, pin))
+    die(`refused: the pin ${sha10(pin)} is on no remote-tracking ref of origin in ${clone} — a commit only this clone holds launders a patch as well as a regenerated manifest does`,
+        `git -C ${clone} fetch origin; if it still refuses, the pin was never pushed — re-vendor from a pushed commit: ${reVendor}`);
   const head = g(["rev-parse", "HEAD"]).out.trim();
   if (g(["merge-base", "--is-ancestor", pin, "HEAD"]).code !== 0)
     die(`refused: ${clone} HEAD ${sha10(head)} does not descend from the pin ${sha10(pin)} — a clone behind the pin names a downgrade`, `git -C ${clone} pull --ff-only`);
@@ -331,7 +347,19 @@ function lawCases(ok, tmp) {
   ok("drift: changed bytes are patched", has(driftProblems(d, m), "patched: ratchet.mjs"));
   writeFileSync(join(d, "ratchet.mjs"), "// tools/ratchet.mjs\n");
   rmSync(join(d, "lint-budget.mjs")); mkdirSync(join(d, "lint-budget.mjs"));
-  ok("drift: an unreadable declared file is patched", has(driftProblems(d, m), "patched: lint-budget.mjs"));
+  ok("drift: a declared member replaced by a directory is not a regular file", has(driftProblems(d, m), "not a regular file: lint-budget.mjs"));
+  rmSync(join(d, "lint-budget.mjs"), { recursive: true }); writeFileSync(join(d, "lint-budget.mjs"), "// tools/lint-budget.mjs\n");
+  // A link to byte-identical bytes still refuses: node resolves a linked entry's
+  // ./ratchet.mjs beside its TARGET, a directory no gate reads.
+  mkdirSync(join(tmp, "shadow")); writeFileSync(join(tmp, "shadow", "ratchet.mjs"), "// tools/ratchet.mjs\n");
+  rmSync(join(d, "ratchet.mjs")); symlinkSync(join(tmp, "shadow", "ratchet.mjs"), join(d, "ratchet.mjs"));
+  ok("drift: a symlinked member refuses even when its target holds the bundle's bytes", has(driftProblems(d, m), "not a regular file: ratchet.mjs"));
+  rmSync(join(d, "ratchet.mjs")); writeFileSync(join(d, "ratchet.mjs"), "// tools/ratchet.mjs\n");
+  ok("drift: a symlinked member case restores clean", driftProblems(d, m).length === 0);
+  const mj = join(tmp, "shadow", MANIFEST);
+  copyFileSync(join(d, MANIFEST), mj); rmSync(join(d, MANIFEST)); symlinkSync(mj, join(d, MANIFEST));
+  ok("drift: a symlinked VENDOR.json is not a regular file", has(driftProblems(d, m), `not a regular file: ${MANIFEST}`));
+  rmSync(join(d, MANIFEST)); copyFileSync(mj, join(d, MANIFEST));
 
   const IMP = "imp" + "ort", EXP = "exp" + "ort";
   const scan = text => importProblems("x.mjs", text);
@@ -439,6 +467,29 @@ function gitCases(ok, tmp) {
   writeFileSync(hostChecker, hostCheckerBytes);
   writeFileSync(join(host, MANIFEST), JSON.stringify(manifest));
 
+  // The same forgery through a link: every byte the checker hashes is picasso's,
+  // and node runs the target, whose ./ratchet.mjs no gate reads.
+  const shadow = join(tmp, "host", "docs", "gates", "shadow");
+  mkdirSync(shadow); copyFileSync(join(host, "console-ratchet.mjs"), join(shadow, "console-ratchet.mjs"));
+  rmSync(join(host, "console-ratchet.mjs")); symlinkSync("../shadow/console-ratchet.mjs", join(host, "console-ratchet.mjs"));
+  r = run(upChecker, ["--freshness", up, "--bundle", host]);
+  ok("freshness (--bundle) refuses a symlinked member whose target holds picasso's bytes",
+    r.code === 1 && r.out.includes("not a regular file: console-ratchet.mjs"));
+  // The repair must not write through a link to a file outside the bundle.
+  const hostTool = join(tmp, "host", "host-tool.mjs"), hostJson = join(tmp, "host", "host.json");
+  writeFileSync(hostTool, "host-owned\n"); writeFileSync(hostJson, JSON.stringify(manifest));
+  rmSync(join(host, "ratchet.mjs")); symlinkSync(hostTool, join(host, "ratchet.mjs"));
+  rmSync(join(host, MANIFEST)); symlinkSync(hostJson, join(host, MANIFEST));
+  r = exp();
+  ok("export refuses bundle names that would be written through a link (VENDOR.json included), before writing anything",
+    r.code === 1 && r.out.includes("\n  ratchet.mjs") && r.out.includes(`\n  ${MANIFEST}`) &&
+    readFileSync(hostTool, "utf8") === "host-owned\n" && readFileSync(hostJson, "utf8") === JSON.stringify(manifest));
+  for (const n of ["console-ratchet.mjs", "ratchet.mjs", MANIFEST]) rmSync(join(host, n));
+  rmSync(shadow, { recursive: true }); rmSync(hostTool); rmSync(hostJson);
+  r = exp();
+  ok("the linked-member cases restore to a clean export", r.code === 0 && run(hostChecker, []).code === 0);
+  writeFileSync(join(host, MANIFEST), JSON.stringify(manifest));
+
   r = fresh(up);
   ok("freshness: pin == HEAD reads FRESH", r.code === 0 && r.out.includes("FRESH —"));
   writeFileSync(join(up, "README.md"), "picasso v2\n"); G(up, "commit", "-qam", "c2");
@@ -470,6 +521,24 @@ function gitCases(ok, tmp) {
   writeFileSync(join(host, MANIFEST), JSON.stringify({ ...manifest, upstream: "f".repeat(40) }));
   r = fresh(up);
   ok("freshness: a pin the clone cannot see refuses", r.code === 1 && r.out.includes("is not a commit in"));
+
+  // A pin no origin ref holds is a commit only this clone has: a patch laundered
+  // through it reads FRESH to picasso's own, genuine checker.
+  writeFileSync(join(up, "tools/a11y-ratchet.mjs"), "// local only\n"); G(up, "commit", "-qam", "local");
+  writeFileSync(join(host, "a11y-ratchet.mjs"), "// local only\n");
+  const localPin = structuredClone(manifest);
+  localPin.upstream = rev(up, "HEAD");
+  localPin.files["a11y-ratchet.mjs"].sha256 = sha256("// local only\n");
+  writeFileSync(join(host, MANIFEST), JSON.stringify(localPin));
+  r = run(upChecker, ["--freshness", up, "--bundle", host]);
+  ok("freshness refuses a pin on no origin ref (a local commit launders a patch)", r.code === 1 && r.out.includes("no remote-tracking ref of origin"));
+  const scratch = join(tmp, "scratch.git");
+  G(tmp, "init", "-q", "--bare", scratch); G(up, "remote", "add", "scratch", scratch); G(up, "push", "-q", "scratch", "HEAD:refs/heads/x");
+  r = exp();
+  ok("export refuses a HEAD that only a non-origin remote holds", r.code === 1 && r.out.includes("no remote-tracking ref of origin"));
+  G(up, "reset", "-q", "--hard", c2);
+  writeFileSync(join(host, "a11y-ratchet.mjs"), "// tools/a11y-ratchet.mjs v1\n");
+  writeFileSync(join(host, MANIFEST), JSON.stringify(manifest));
 
   rmSync(join(host, MANIFEST));
   r = run(hostChecker, []);

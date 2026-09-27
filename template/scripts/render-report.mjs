@@ -6,7 +6,7 @@
  * writes the reports the ratchet gates then judge:
  *   <REPORT_DIR>/console-report.json   [{route, text}]  — console/page errors,
  *                                      failed requests, HTTP >= 400 responses
- *   <REPORT_DIR>/a11y-report.json      axe violations    — judged by a11y-ratchet
+ *   <REPORT_DIR>/a11y-report.json      [{route, rule, selector, impact}] — judged by a11y-ratchet
  *   <REPORT_DIR>/render-failures.json  [route, ...]      — routes that never
  *                                      rendered, or answered HTTP >= 400
  *
@@ -24,6 +24,7 @@
  *     BASE_URL=https://example.org            sweep a running site
  *     ROOT_SELECTOR=body                      the element that must carry content (default #root)
  *     REPORT_DIR=reports                      where the reports land
+ *     SETTLE_MS=2000                          how long each route is held open after load
  *   node scripts/render-report.mjs --self-test
  */
 
@@ -44,6 +45,7 @@ const EXTERNAL = process.env.BASE_URL ? process.env.BASE_URL.replace(/\/+$/, "")
 const BASE = EXTERNAL ?? `http://localhost:${PORT}`;
 const ROOT_SELECTOR = process.env.ROOT_SELECTOR || "#root";
 const REPORT_DIR = process.env.REPORT_DIR || "reports";
+const SETTLE_MS = Number(process.env.SETTLE_MS) || 2000;
 // A URL's stable identity: origin + path (query strings carry cache-busters).
 const stable = u => { try { const x = new URL(u); return x.origin + x.pathname; } catch { return u; } };
 const routes = (process.env.ROUTES || "/").split(",").map(r => r.trim()).filter(Boolean);
@@ -119,10 +121,15 @@ async function sweep() {
           if (!rendered) await page.waitForTimeout(250);
         }
         if (!rendered && !renderFailures.includes(route)) renderFailures.push(route);
+        // Held open past load: a late API call, a timer's error and content that
+        // mounts late are recorded and audited; every listener runs until close.
+        // ponytail: a fixed window — a failure later than SETTLE_MS is not seen;
+        // raise SETTLE_MS for a route that fails late.
+        await page.waitForTimeout(SETTLE_MS);
         const axe = await new AxeBuilder({ page }).analyze();
         for (const v of axe.violations)
           for (const node of v.nodes)
-            a11yViolations.push({ rule: v.id, selector: node.target.join(" "), impact: v.impact ?? "" });
+            a11yViolations.push({ route, rule: v.id, selector: node.target.join(" "), impact: v.impact ?? "" });
       } catch (e) {
         if (!renderFailures.includes(route)) renderFailures.push(route);
         errors.push({ route, text: `navigation failed: ${String(e).split("\n")[0]}` });
@@ -152,6 +159,10 @@ async function selfTest() {
     "/": page('<div id="root"><h1>home</h1><img src="/missing.png?v=1" alt="missing"></div>'),
     "/empty": page('<div id="root"></div>'),
     "/broken": page('<div id="root"><h1>broken</h1></div><script>console.error("boom from /broken")</script>'),
+    // Failures a second after load: a timer error, a failing API call, and a
+    // control that mounts after the root already carries content.
+    "/late": page('<div id="root"><h1>late</h1></div><script>setTimeout(() => { console.error("late boom"); ' +
+      'fetch("/api/me"); document.getElementById("root").insertAdjacentHTML("beforeend", "<button id=late-btn></button>"); }, 1000)</script>'),
   };
   const server = createServer((req, res) => {
     const path = new URL(req.url, "http://x").pathname;
@@ -160,7 +171,7 @@ async function selfTest() {
   });
   await new Promise(r => server.listen(0, "127.0.0.1", r));
   const dir = mkdtempSync(join(tmpdir(), "picasso-render-"));
-  const env = { ...process.env, BASE_URL: `http://127.0.0.1:${server.address().port}/`, ROUTES: "/, /empty, /gone, /broken", REPORT_DIR: dir };
+  const env = { ...process.env, BASE_URL: `http://127.0.0.1:${server.address().port}/`, ROUTES: "/, /empty, /gone, /broken, /late", REPORT_DIR: dir, SETTLE_MS: "" };
   const child = spawn(process.execPath, [fileURLToPath(import.meta.url)], { cwd: dir, env, stdio: "inherit" });
   const code = await new Promise(r => child.on("exit", r));
   server.close();
@@ -174,6 +185,11 @@ async function selfTest() {
   ok("the 404 is named in the console report", consoleReport.some(e => e.startsWith("/gone HTTP 404")));
   ok("a missing asset is named, query string stripped (stable identity)", consoleReport.some(e => /^\/ HTTP 404: http:\/\/127\.0\.0\.1:\d+\/missing\.png$/.test(e)));
   ok("a console error is named", consoleReport.some(e => e.startsWith("/broken boom from /broken")));
+  ok("a console error a second after load is named", consoleReport.includes("/late late boom"));
+  ok("a failing API call a second after load is named", consoleReport.some(e => /^\/late HTTP 404: http:\/\/127\.0\.0\.1:\d+\/api\/me$/.test(e)));
+  const a11y = read("a11y-report.json") ?? [];
+  ok("content mounted a second after load is audited", a11y.some(v => v.route === "/late" && v.rule === "button-name"));
+  ok("every a11y entry carries its route (the ratchet's identity is route-scoped)", a11y.length > 0 && a11y.every(v => typeof v.route === "string" && v.route.startsWith("/")));
   ok("reports land in REPORT_DIR", read("a11y-report.json") !== null);
   rmSync(dir, { recursive: true, force: true });
   console.log(failures.length ? `render-report: ${failures.length} self-test failure(s)` : "render-report: self-test clean");

@@ -1,0 +1,82 @@
+{
+  "id": "vendorable-checks-review-fixes",
+  "phase": "executing",
+  "riskClass": "tooling",
+  "scope": [
+    "tools/checks-vendor.mjs",
+    "tools/a11y-ratchet.mjs",
+    "tools/size-budget.mjs",
+    "template/tools/checks-vendor.mjs",
+    "template/tools/a11y-ratchet.mjs",
+    "template/tools/size-budget.mjs",
+    "template/scripts/render-report.mjs",
+    "template/VENDOR-PIN",
+    "docs/WIRING.md",
+    "docs/TASK-LIFECYCLE.md"
+  ],
+  "pins": [
+    {
+      "command": "r=$(node tools/checks-vendor.mjs --self-test 2>&1 | grep -E '^  (ok|FAIL) .*(symlinked member|replaced by a directory)'); echo \"$r\"; [ \"$(echo \"$r\" | grep -c '^  ok')\" -eq 4 ]",
+      "recordedExit": 1,
+      "evidence": "FAIL drift: a declared member replaced by a directory is not a regular file\n  FAIL drift: a symlinked member refuses even when its target holds the bundle's bytes\n  ok drift: a symlinked member case restores clean\n  FAIL freshness (--bundle) refuses a symlinked member whose target holds picasso's bytes",
+      "at": "2026-09-27T19:17:36.826Z"
+    },
+    {
+      "command": "r=$(node tools/checks-vendor.mjs --self-test 2>&1 | grep -E '^  (ok|FAIL) .*(no origin ref|non-origin remote)'); echo \"$r\"; [ \"$(echo \"$r\" | grep -c '^  ok')\" -eq 2 ]",
+      "recordedExit": 1,
+      "evidence": "FAIL freshness refuses a pin on no origin ref (a local commit launders a patch)\n  FAIL export refuses a HEAD that only a non-origin remote holds",
+      "at": "2026-09-27T19:17:38.500Z"
+    },
+    {
+      "command": "r=$(node tools/checks-vendor.mjs --self-test 2>&1 | grep -E '^  (ok|FAIL) .*(written through a link)'); echo \"$r\"; [ \"$(echo \"$r\" | grep -c '^  ok')\" -eq 1 ]",
+      "recordedExit": 1,
+      "evidence": "FAIL export refuses a member that would be written through a link, before writing anything",
+      "at": "2026-09-27T19:17:40.180Z"
+    },
+    {
+      "command": "r=$( { node tools/a11y-ratchet.mjs --self-test; node template/scripts/render-report.mjs --self-test; } 2>&1 | grep -E '^  (ok|FAIL) .*(another route|carries its route)'); echo \"$r\"; [ \"$(echo \"$r\" | grep -c '^  ok')\" -eq 2 ]",
+      "recordedExit": 1,
+      "evidence": "FAIL the same violation on another route is a different defect\n  FAIL every a11y entry carries its route (the ratchet's identity is route-scoped)",
+      "at": "2026-09-27T19:17:47.998Z"
+    },
+    {
+      "command": "! grep -nF 'ROOT_SELECTOR=body REPORT_DIR=reports/ui' docs/WIRING.md && grep -qF 'ROOT_SELECTOR=<the app root' docs/WIRING.md",
+      "recordedExit": 1,
+      "evidence": "148:- run: BASE_URL=http://127.0.0.1:<port> ROUTES=\"/, /feed, /watch\" ROOT_SELECTOR=body REPORT_DIR=reports/ui node docs/gates/picasso/render-report.mjs",
+      "at": "2026-09-27T19:17:48.032Z"
+    },
+    {
+      "command": "r=$(node template/scripts/render-report.mjs --self-test 2>&1 | grep -E '^  (ok|FAIL) .*a second after load'); echo \"$r\"; [ \"$(echo \"$r\" | grep -c '^  ok')\" -eq 3 ]",
+      "recordedExit": 1,
+      "evidence": "FAIL a console error a second after load is named\n  FAIL a failing API call a second after load is named\n  FAIL content mounted a second after load is audited",
+      "at": "2026-09-27T19:17:53.679Z"
+    },
+    {
+      "command": "r=$(node tools/size-budget.mjs --self-test 2>&1 | grep -E '^  (ok|FAIL) .*directory budget'); echo \"$r\"; [ \"$(echo \"$r\" | grep -c '^  ok')\" -eq 2 ]",
+      "recordedExit": 1,
+      "evidence": "FAIL a directory budget sums every file beneath it\n  FAIL a directory budget with no files is missing",
+      "at": "2026-09-27T19:17:53.955Z"
+    },
+    {
+      "command": "r=$(node tools/size-budget.mjs --self-test 2>&1 | grep -E '^  (ok|FAIL) .*not a green over nothing'); echo \"$r\"; [ \"$(echo \"$r\" | grep -c '^  ok')\" -eq 3 ]",
+      "recordedExit": 1,
+      "evidence": "FAIL an empty budget list refuses with a rule, not a green over nothing\n  FAIL a bare array refuses with a rule, not a green over nothing\n  FAIL an object with no budgets refuses with a rule, not a green over nothing",
+      "at": "2026-09-27T19:17:54.216Z"
+    }
+  ],
+  "created": "2026-09-27T19:14:52.609Z",
+  "history": [
+    {
+      "at": "2026-09-27T19:14:52.610Z",
+      "to": "intake"
+    },
+    {
+      "at": "2026-09-27T19:14:52.977Z",
+      "to": "planned"
+    },
+    {
+      "at": "2026-09-27T19:14:53.017Z",
+      "to": "executing"
+    }
+  ]
+}

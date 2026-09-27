@@ -27,11 +27,13 @@ import { judge } from "./ratchet.mjs";
 
 function die(msg) { console.error(`a11y-ratchet: ${msg}`); process.exit(1); }
 
-// A violation identity: rule + node selector + impact. Anything coarser merges
-// distinct defects; anything finer lets a fix slip through as "different".
+// A violation identity: route + rule + node selector + impact. Anything coarser
+// merges distinct defects (page-level rules all name `html`, so without the route
+// one baselined page hides the rule on every route); anything finer lets a fix
+// slip through as "different".
 export function keyOf(v) {
   if (typeof v === "string") return v;
-  return [v.rule, v.selector ?? v.node ?? "", v.impact ?? ""].join("|");
+  return [...(v.route ? [v.route] : []), v.rule, v.selector ?? v.node ?? "", v.impact ?? ""].join("|");
 }
 
 const judgeLists = (current, baseline) => judge(current, baseline, keyOf);
@@ -62,6 +64,12 @@ function selfTest() {
   ok("resolved entry demands pruning", !better.clean && better.resolved.length === 1);
   ok("same rule elsewhere is a different defect", judgeLists([v("label", "#name")], base).added.length === 1);
   ok("string entries (render failures) key by themselves", keyOf("stories/foo--bar") === "stories/foo--bar");
+  // Page-level rules all name `html`: without the route, one baselined page hides
+  // the same violation on every other route, and on every route added later.
+  const on = (route, rule, sel) => ({ route, rule, selector: sel, impact: "serious" });
+  const home = [on("/", "html-has-lang", "html")];
+  ok("the same violation on another route is a different defect",
+    judgeLists([...home, on("/feed", "html-has-lang", "html")], home).added.length === 1);
 
   // File-level wiring on disk, the way CI consumes it.
   const dir = mkdtempSync(join(tmpdir(), "picasso-a11y-"));
