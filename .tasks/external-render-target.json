@@ -1,6 +1,6 @@
 {
   "id": "external-render-target",
-  "phase": "adversarial",
+  "phase": "done",
   "riskClass": "tooling",
   "scope": [
     "template/scripts",
@@ -42,6 +42,16 @@
     {
       "at": "2026-09-27T12:32:55.101Z",
       "to": "adversarial"
+    },
+    {
+      "at": "2026-09-27T12:36:39.393Z",
+      "to": "done"
     }
-  ]
+  ],
+  "adversarial": {
+    "findings": "docs/tasks/external-render-target.adversarial.json",
+    "probes": 8,
+    "clean": true,
+    "at": "2026-09-27T12:36:39.393Z"
+  }
 }
