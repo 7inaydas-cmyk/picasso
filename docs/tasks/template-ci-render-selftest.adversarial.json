@@ -1,0 +1,24 @@
+{
+  "task": "template-ci-render-selftest",
+  "at": "2026-09-27",
+  "probes": [
+    {
+      "name": "without the line, the template registry REFUSES (render-selftest-ci missing from ci)",
+      "command": "cd template && git show HEAD:template/.github/workflows/selftest.yml > .github/workflows/selftest.yml && node tools/gate-registry.mjs",
+      "exitCode": 1,
+      "evidence": "gate-registry: gate 'render-selftest-ci' is missing from transport 'ci' … fix: restore the line 'npm run render:selftest'"
+    },
+    {
+      "name": "a swallowed carrier ('npm run render:selftest || true') does not count",
+      "command": "sed 's/run: npm run render:selftest$/& || true/' in the template CI; node tools/gate-registry.mjs",
+      "exitCode": 1,
+      "evidence": "gate 'render-selftest-ci' is missing from transport 'ci' — no carrier of the strict shape runs it"
+    },
+    {
+      "name": "with the line, the template registry is green",
+      "command": "cd template && node tools/gate-registry.mjs",
+      "exitCode": 0,
+      "evidence": "gate-registry: 27 gate(s), every declaration present in every transport"
+    }
+  ]
+}

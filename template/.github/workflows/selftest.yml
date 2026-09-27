@@ -18,6 +18,7 @@ jobs:
       - run: npm exec playwright install chromium --with-deps
       - name: resolve chromium for lighthouse
         run: echo "CHROME_PATH=$(node -e "console.log(require('playwright').chromium.executablePath())")" >> "$GITHUB_ENV"
+      - run: npm run render:selftest
       - run: npm run render:gate
       - run: npm run budget:gate
       - run: npm run perf:gate
