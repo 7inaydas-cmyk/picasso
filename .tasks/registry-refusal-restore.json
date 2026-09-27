@@ -1,6 +1,6 @@
 {
   "id": "registry-refusal-restore",
-  "phase": "adversarial",
+  "phase": "done",
   "riskClass": "tooling",
   "scope": [
     "tools",
@@ -37,6 +37,16 @@
     {
       "at": "2026-09-27T12:38:43.746Z",
       "to": "adversarial"
+    },
+    {
+      "at": "2026-09-27T12:38:54.471Z",
+      "to": "done"
     }
-  ]
+  ],
+  "adversarial": {
+    "findings": "docs/tasks/registry-refusal-restore.adversarial.json",
+    "probes": 4,
+    "clean": true,
+    "at": "2026-09-27T12:38:54.471Z"
+  }
 }
