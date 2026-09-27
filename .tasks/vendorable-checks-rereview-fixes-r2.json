@@ -1,6 +1,6 @@
 {
   "id": "vendorable-checks-rereview-fixes-r2",
-  "phase": "executing",
+  "phase": "verified",
   "riskClass": "tooling",
   "scope": [
     "tools/checks-vendor.mjs",
@@ -53,6 +53,10 @@
     {
       "at": "2026-09-27T20:00:21.347Z",
       "to": "executing"
+    },
+    {
+      "at": "2026-09-27T20:05:16.654Z",
+      "to": "verified"
     }
   ]
 }
