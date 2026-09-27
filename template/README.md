@@ -15,6 +15,10 @@ npm run selftest   # the vendored picasso tools' battery
 node tools/task-coverage.mjs --doctor
 ```
 
+`render:gate` sweeps the built app on a local preview; `BASE_URL=<url>` makes
+`scripts/render-report.mjs` sweep an already-running site in place (a deployed
+app, or another repo's server — see picasso's docs/WIRING.md).
+
 Baselines start empty in `baselines/` — only NEW findings fail; resolved ones
 must be pruned. Read-first list: `docs/context-manifest.md`. Lifecycle law:
 `AGENTS.md`. `picasso.json` declares this repo's front-end jurisdiction — the

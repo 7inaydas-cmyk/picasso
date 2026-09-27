@@ -69,6 +69,26 @@ playwright-mcp) and must record, per probe: route, breakpoint, what the
 screenshot shows, and the judgment. `done` refuses a pass where nothing was
 refused — a screenshot loop that never found anything to question did not look.
 
+## The gate discipline in a repo that does not vendor picasso
+
+A repo governed by stallion (Antitube is one) keeps stallion's lifecycle and
+fences; picasso contributes its front-end gate discipline, run from a picasso
+checkout against the running site — nothing is vendored into the host repo:
+
+```sh
+BASE_URL=https://antitube.tv ROUTES="/, /feed, /watch" ROOT_SELECTOR=body \
+  REPORT_DIR=<dir> node <picasso>/template/scripts/render-report.mjs
+node <picasso>/tools/console-ratchet.mjs --report <dir>/console-report.json --baseline <console-baseline.json>
+node <picasso>/tools/a11y-ratchet.mjs --violations <dir>/a11y-report.json --baseline <a11y-baseline.json> \
+  --render-failures <dir>/render-failures.json --render-baseline <render-baseline.json>
+```
+
+`BASE_URL` sweeps in place (nothing built or started); a page answering HTTP
+>= 400 is a render failure; missing assets and failing API calls are named in
+the console report with origin+path identities. Baselines start as `[]` and
+live with the host repo's gates; fixes land under the host repo's own
+lifecycle. The `picasso` skill (plugin) carries this recipe into every session.
+
 ## The enforcement plugin (invoking picasso in the session)
 
 `plugin/` is the stallion-pattern transport against instruction decay: a

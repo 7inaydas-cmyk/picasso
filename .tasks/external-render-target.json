@@ -1,0 +1,47 @@
+{
+  "id": "external-render-target",
+  "phase": "adversarial",
+  "riskClass": "tooling",
+  "scope": [
+    "template/scripts",
+    "template/package.json",
+    "template/docs",
+    "template/README.md",
+    "template/AGENTS.md",
+    ".github",
+    "docs",
+    "plugin",
+    ".tasks"
+  ],
+  "pins": [
+    {
+      "command": "cd template && node scripts/render-report.mjs --self-test",
+      "recordedExit": 1,
+      "evidence": "    at async Object.buildApp (file:///home/excelsior/.npm/_npx/9ed06546b0653f96/node_modules/vite/dist/node/chunks/node.js:34863:153)\n    at async CAC.<anonymous> (file:///home/excelsior/.npm/_npx/9ed06546b0653f96/node_modules/vite/dist/node/cli.js:780:3) {\n  errors: [Getter/Setter]\n}",
+      "at": "2026-09-27T12:30:40.324Z"
+    }
+  ],
+  "created": "2026-09-27T12:29:54.526Z",
+  "history": [
+    {
+      "at": "2026-09-27T12:29:54.526Z",
+      "to": "intake"
+    },
+    {
+      "at": "2026-09-27T12:29:54.806Z",
+      "to": "planned"
+    },
+    {
+      "at": "2026-09-27T12:29:54.830Z",
+      "to": "executing"
+    },
+    {
+      "at": "2026-09-27T12:32:44.594Z",
+      "to": "verified"
+    },
+    {
+      "at": "2026-09-27T12:32:55.101Z",
+      "to": "adversarial"
+    }
+  ]
+}

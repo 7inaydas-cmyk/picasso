@@ -1,0 +1,58 @@
+{
+  "task": "external-render-target",
+  "at": "2026-09-27",
+  "probes": [
+    {
+      "name": "an unreachable BASE_URL is a render failure, never a pass",
+      "command": "BASE_URL=http://127.0.0.1:9 ROUTES=/ node template/scripts/render-report.mjs",
+      "exitCode": 1,
+      "evidence": "render-report: http://127.0.0.1:9 — 1 route(s) — 2 console error(s), 0 axe violation(s), 1 render failure(s) | render-failures: [\"/\"]"
+    },
+    {
+      "name": "a ROOT_SELECTOR matching nothing is a render failure (SSR page without #root)",
+      "command": "BASE_URL=<ssr site> ROUTES=/ node template/scripts/render-report.mjs   (default #root)",
+      "exitCode": 1,
+      "evidence": "render-report: http://127.0.0.1:38225 — 1 route(s) — 0 console error(s), 1 axe violation(s), 1 render failure(s) | render-failures: [\"/\"]"
+    },
+    {
+      "name": "the same SSR page renders with ROOT_SELECTOR=body",
+      "command": "BASE_URL=<ssr site> ROUTES=/ ROOT_SELECTOR=body node template/scripts/render-report.mjs",
+      "exitCode": 0,
+      "evidence": "render-report: http://127.0.0.1:38225 — 1 route(s) — 0 console error(s), 1 axe violation(s), 0 render failure(s) | render-failures: []"
+    },
+    {
+      "name": "a redirect that lands on a 404 is a render failure",
+      "command": "BASE_URL=<site> ROUTES=/old (302 → 404)",
+      "exitCode": 1,
+      "evidence": "render-report: http://127.0.0.1:38225 — 1 route(s) — 2 console error(s), 0 axe violation(s), 1 render failure(s) | render-failures: [\"/old\"]"
+    },
+    {
+      "name": "default mode still refuses to sweep a server it did not start",
+      "command": "PORT=4574 node scripts/render-report.mjs   (port occupied)",
+      "exitCode": 1,
+      "evidence": "render-report: http://localhost:4574 already answers (status 200) — refusing to sweep a server we did not start"
+    },
+    {
+      "name": "live: the Antitube public site swept in place (BASE_URL, no build, no server started)",
+      "command": "BASE_URL=https://antitube.tv ROUTES=\"/, /feed, /watch\" ROOT_SELECTOR=body REPORT_DIR=<dir> node template/scripts/render-report.mjs",
+      "exitCode": 1,
+      "evidence": "render-report: https://antitube.tv — 3 route(s) — 2 console error(s), 39 axe violation(s), 1 render failure(s) | render-failures: [\"/watch\"] — the recorded /watch 404 FAIL, reproduced"
+    },
+    {
+      "name": "live: console-ratchet REFUSES the Antitube /watch 404 against an empty baseline",
+      "command": "node tools/console-ratchet.mjs --report <dir>/console-report.json --baseline <[]>",
+      "exitCode": 1,
+      "evidence": "console-ratchet: refused: 2 NEW console error(s) the baseline does not cover: /watch|HTTP 404 on /watch"
+    },
+    {
+      "name": "live: a11y-ratchet REFUSES the 39 Antitube axe violations against an empty baseline",
+      "command": "node tools/a11y-ratchet.mjs --violations <dir>/a11y-report.json --baseline <[]> --render-failures <dir>/render-failures.json --render-baseline <[]>",
+      "exitCode": 1,
+      "evidence": "a11y-ratchet: refused: 39 NEW accessibility violation(s) the baseline does not cover: region|…, landmark-unique|…"
+    }
+  ],
+  "open": [
+    "a server that answers 200 for every path (a SPA fallback such as vite preview) still hides missing assets — the gate-identity task",
+    "ROUTES is the whole sweep: routes not listed are not judged"
+  ]
+}

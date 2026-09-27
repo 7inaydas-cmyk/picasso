@@ -39,6 +39,7 @@ jobs:
       - run: npm --prefix template exec playwright install chromium --with-deps
       - name: resolve chromium for lighthouse
         run: echo "CHROME_PATH=$(cd template && node -e "console.log(require('playwright').chromium.executablePath())")" >> "$GITHUB_ENV"
+      - run: npm --prefix template run render:selftest
       - run: npm --prefix template run render:gate
       - run: npm --prefix template run budget:gate
       - run: npm --prefix template run perf:gate

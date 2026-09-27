@@ -101,6 +101,15 @@
       "checks": "template's visual verification seam: headless render + console/a11y/render-failure ratchets all judge clean"
     },
     {
+      "id": "template-render-selftest",
+      "invocation": "npm --prefix template run render:selftest",
+      "transports": [
+        "ci"
+      ],
+      "phase": "verified",
+      "checks": "the template's render seam self-test runs in picasso's CI (external BASE_URL mode, 404 pages, missing assets)"
+    },
+    {
       "id": "template-selftest",
       "invocation": "npm --prefix template run selftest",
       "transports": [

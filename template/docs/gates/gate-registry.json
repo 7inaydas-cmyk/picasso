@@ -83,6 +83,24 @@
       "checks": "headless render of every route; console ratchet + a11y ratchet + render-failure ratchet all judge clean"
     },
     {
+      "id": "render-report-self-test",
+      "invocation": "node scripts/render-report.mjs --self-test",
+      "transports": [
+        "scripts"
+      ],
+      "phase": "verified",
+      "checks": "the render seam sweeps a live site for real: an HTTP 404 page and an empty root are render failures, missing assets and console errors are named with stable identities, BASE_URL sweeps in place"
+    },
+    {
+      "id": "render-selftest-ci",
+      "invocation": "npm run render:selftest",
+      "transports": [
+        "ci"
+      ],
+      "phase": "verified",
+      "checks": "CI runs the render seam's self-test against a local fixture site (chromium installed first)"
+    },
+    {
       "id": "render-gate-console-ratchet",
       "invocation": "node tools/console-ratchet.mjs --report reports/console-report.json --baseline baselines/console-baseline.json",
       "transports": [
