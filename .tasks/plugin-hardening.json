@@ -1,0 +1,51 @@
+{
+  "id": "plugin-hardening",
+  "phase": "done",
+  "riskClass": "tooling",
+  "scope": [
+    "plugin",
+    "docs",
+    ".tasks"
+  ],
+  "pins": [
+    {
+      "command": "node plugin/lib/gate-law.mjs --self-test",
+      "recordedExit": 1,
+      "evidence": "  ok live: the harness file itself stays editable to repair it\n  FAIL live: a nested harness does not flip the verdict by cwd\n  FAIL live: the banner does not import an unclaimed repo's code\ngate-law: 11 self-test failure(s)",
+      "at": "2026-09-27T08:43:47.747Z"
+    }
+  ],
+  "created": "2026-09-27T08:41:07.529Z",
+  "history": [
+    {
+      "at": "2026-09-27T08:41:07.529Z",
+      "to": "intake"
+    },
+    {
+      "at": "2026-09-27T08:41:07.639Z",
+      "to": "planned"
+    },
+    {
+      "at": "2026-09-27T08:41:07.660Z",
+      "to": "executing"
+    },
+    {
+      "at": "2026-09-27T08:47:31.151Z",
+      "to": "verified"
+    },
+    {
+      "at": "2026-09-27T08:47:38.593Z",
+      "to": "adversarial"
+    },
+    {
+      "at": "2026-09-27T09:05:42.846Z",
+      "to": "done"
+    }
+  ],
+  "adversarial": {
+    "findings": "docs/tasks/plugin-hardening.adversarial.json",
+    "probes": 12,
+    "clean": true,
+    "at": "2026-09-27T09:05:42.846Z"
+  }
+}

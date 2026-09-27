@@ -11,34 +11,30 @@
  * either runner. The project dir comes from payload.cwd (Claude Code sends it),
  * else CLAUDE_PROJECT_DIR / ZCODE_PROJECT_DIR (both runners inject one), else
  * the process cwd.
+ *
+ * Silent — and never importing repo code — unless the repo top claims a
+ * jurisdiction (picasso.json beside tools/task-coverage.mjs).
  */
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { findHarnessRoot, loadLaw, readJurisdiction } from "../lib/law-source.mjs";
-import { readRecords, bannerLine } from "../lib/gate-law.mjs";
+import { readRecords, bannerLine, parseEditPayload } from "../lib/gate-law.mjs";
 import { readStdin } from "../lib/io.mjs";
 
 try {
-  let payload = {};
-  try { payload = JSON.parse(await readStdin()) || {}; } catch { /* no parsable payload: fall back to env/cwd */ }
-  const cwd = (typeof payload.cwd === "string" && payload.cwd.length > 0)
-    ? payload.cwd
-    : process.env.CLAUDE_PROJECT_DIR || process.env.ZCODE_PROJECT_DIR || process.cwd();
-  const event = payload.hook_event_name === "SessionStart" ? "SessionStart" : "UserPromptSubmit";
+  let payload = null;
+  try { payload = JSON.parse(await readStdin()); } catch { /* no parsable payload: fall back to env/cwd */ }
+  const { cwd } = parseEditPayload(payload);
+  const event = payload?.hook_event_name === "SessionStart" ? "SessionStart" : "UserPromptSubmit";
   const root = findHarnessRoot(cwd);
   if (!root) process.exit(0);
-  const jurisdiction = readJurisdiction(root);
+  const claim = readJurisdiction(root);
   const lines = [];
-  lines.push(`picasso: front-end harness ${jurisdiction ? `armed (jurisdiction: ${jurisdiction.join(", ")})` : "present but unarmed — no picasso.json jurisdiction declared"}`);
-  const law = await loadLaw(root);
-  if (law.ok) {
-    const stateDir = join(root, ".tasks");
-    const records = existsSync(stateDir)
-      ? readRecords(stateDir, readdirSync, readFileSync, join)
-      : [];
-    const line = bannerLine(records, law.authorizingPhases);
-    if (line) lines.push(`picasso: in-flight — ${line}`);
-    else lines.push("picasso: no in-flight front-end task (front-end edits inside jurisdiction will be denied until one exists)");
+  if (!claim.ok) {
+    lines.push(`picasso: front-end harness claim is unreadable — every edit in this repo is refused until it is repaired: ${claim.reason}`);
+  } else {
+    lines.push(`picasso: front-end harness armed (jurisdiction: ${claim.globs.join(", ")})`);
+    const law = await loadLaw(root);
+    if (!law.ok) lines.push(`picasso: the harness law cannot load — front-end edits are refused: ${law.reason}`);
+    else lines.push(`picasso: ${bannerLine(readRecords(law.stateDir), law.authorizingPhases) ?? "no in-flight front-end task (front-end edits inside jurisdiction will be denied until one exists)"}`);
   }
   process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: event, additionalContext: lines.join("\n") } }) + "\n");
   process.exit(0);

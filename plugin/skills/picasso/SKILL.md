@@ -2,7 +2,7 @@
 name: picasso
 metadata:
   author: picasso contributors
-  version: "0.1.0"
+  version: "0.2.0"
 description: "Front-end task-lifecycle harness (picasso, the front-end brother of stallion). Use when doing front-end work (components, pages, styles, templates) in a repo that vendors picasso, when adopting picasso into a front-end repo, or when the user mentions picasso, the front-end jurisdiction, or front-end gates."
 license: "MIT — see the picasso repo's LICENSE"
 ---
@@ -15,8 +15,8 @@ fences refuse violations with the rule, the evidence, and an exact fix command.
 
 ## When this applies
 
-A repo is under picasso when it vendors the harness (`tools/task-coverage.mjs` +
-`.tasks/`) **and** declares a front-end jurisdiction (`picasso.json`, e.g.
+A repo is under picasso when its top vendors the harness (`tools/task-coverage.mjs`)
+**and** declares a front-end jurisdiction (`picasso.json`, e.g.
 `{ "jurisdiction": ["src/**", "index.html"] }`). Outside that jurisdiction — or
 in a repo without the harness — picasso makes no claim; work there freely.
 

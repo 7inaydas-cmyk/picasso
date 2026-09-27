@@ -61,12 +61,18 @@ defaults) bounds everything the plugin may refuse.
 - Inside jurisdiction: front-end edits require an in-flight task
   (`executing`–`adversarial`; `done` authorizes nothing) whose scope covers the
   file, else exit 2 with rule + evidence + exact fix.
-- Outside jurisdiction, no `picasso.json`, or no vendored harness: **inert** —
-  the plugin never governs work that is not front-end work.
+- The repo is found from the EDITED FILE's repo top (through symlinks), never the
+  session cwd. Outside jurisdiction, no `picasso.json`, or no vendored harness:
+  **inert** — never refused, and the repo's code is never imported.
+- Inside a claimed repo the gate fails closed: an unreadable claim, an
+  unloadable harness, a patch that names no file, or a crash denies with a fix.
+- Known ceiling: shell writes (Bash `cat >`, `sed -i`) are not gated; the git
+  fences judge them at commit and push.
 - Banner (SessionStart/UserPromptSubmit): live front-end task state every turn;
-  fails open.
+  fails open; silent in unclaimed repos.
 
-Install: copy or symlink `plugin/` into your plugins location. Verify:
+Install: see `plugin/README.md` (ZCode registers `plugin/`; Claude Code installs the
+`plugin/claude-code-persistent/` root). Verify:
 `node plugin/lib/gate-law.mjs --self-test`, then a live payload probe (see
 `plugin/README.md`).
 

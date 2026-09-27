@@ -1,0 +1,86 @@
+{
+  "task": "plugin-hardening",
+  "at": "2026-09-27",
+  "probes": [
+    {
+      "name": "fresh adoption (no .tasks/) — in-jurisdiction Write is DENIED",
+      "command": "echo '{\"tool_name\":\"Write\",\"cwd\":\"/tmp/claude-1000/-home-excelsior-Desktop-stallion/339ea17b-541d-4652-8df5-1841c43957ed/scratchpad/probes/app\",\"tool_input\":{\"file_path\":\"/tmp/claude-1000/-home-excelsior-Desktop-stallion/339ea17b-541d-4652-8df5-1841c43957ed/scratchpad/probes/app/src/App.tsx\"}}' | node plugin/hooks/authoring-gate.mjs",
+      "exitCode": 2,
+      "evidence": "picasso authoring-gate: the edit targets src/App.tsx, inside this repo's declared front-end jurisdiction, and no in-flight task covers it |   rule: front-end code lands only under a task advanced to executing (covering tasks found: none) |   fix: cd '$S/app' && node tools/task-state.mjs new edit-app --risk-class ui-runtime && node tools/task-state.mjs scope edit-app --add 'src/**' && node tools/task-state.mjs advance edit-app && node tools/task-state.mjs advance edit-app"
+    },
+    {
+      "name": "session cwd in another dir — the edited file's repo still judges (DENIED)",
+      "command": "echo '{\"tool_name\":\"Write\",\"cwd\":\"/tmp/claude-1000/-home-excelsior-Desktop-stallion/339ea17b-541d-4652-8df5-1841c43957ed/scratchpad/probes\",\"tool_input\":{\"file_path\":\"/tmp/claude-1000/-home-excelsior-Desktop-stallion/339ea17b-541d-4652-8df5-1841c43957ed/scratchpad/probes/app/src/App.tsx\"}}' | node plugin/hooks/authoring-gate.mjs",
+      "exitCode": 2,
+      "evidence": "picasso authoring-gate: the edit targets src/App.tsx, inside this repo's declared front-end jurisdiction, and no in-flight task covers it |   rule: front-end code lands only under a task advanced to executing (covering tasks found: none) |   fix: cd '$S/app' && node tools/task-state.mjs new edit-app --risk-class ui-runtime && node tools/task-state.mjs scope edit-app --add 'src/**' && node tools/task-state.mjs advance edit-app && node tools/task-state.mjs advance edit-app"
+    },
+    {
+      "name": "ApplyPatch in a repo with no picasso claim passes untouched",
+      "command": "echo '{\"tool_name\":\"ApplyPatch\",\"tool_input\":{\"patch_text\":\"an opaque patch\"}}' | node plugin/hooks/authoring-gate.mjs",
+      "exitCode": 0,
+      "evidence": "(silent)"
+    },
+    {
+      "name": "ApplyPatch with an unknown *** directive inside a claimed repo is DENIED",
+      "command": "echo '{\"tool_name\":\"ApplyPatch\",\"tool_input\":{\"patch_text\":\"*** Begin Patch\\n*** Frobnicate File: src/App.tsx\\n*** End Patch\"}}' | node plugin/hooks/authoring-gate.mjs",
+      "exitCode": 2,
+      "evidence": "picasso authoring-gate: cannot determine the target file of the ApplyPatch edit inside $S/app, which declares a picasso jurisdiction |   rule: a gate that cannot name the file it is asked to bless refuses |   fix: make the edit with Edit or Write and an explicit file_path"
+    },
+    {
+      "name": "ApplyPatch with git mnemonic prefixes is judged at src/App.tsx (DENIED)",
+      "command": "echo '{\"tool_name\":\"ApplyPatch\",\"tool_input\":{\"patch_text\":\"diff --git i/src/App.tsx w/src/App.tsx\\n--- i/src/App.tsx\\n+++ w/src/App.tsx\\n\"}}' | node plugin/hooks/authoring-gate.mjs",
+      "exitCode": 2,
+      "evidence": "picasso authoring-gate: the edit targets src/App.tsx, inside this repo's declared front-end jurisdiction, and no in-flight task covers it |   rule: front-end code lands only under a task advanced to executing (covering tasks found: none) |   fix: cd '$S/app' && node tools/task-state.mjs new edit-app --risk-class ui-runtime && node tools/task-state.mjs scope edit-app --add 'src/**' && node tools/task-state.mjs advance edit-app && node tools/task-state.mjs advance edit-app"
+    },
+    {
+      "name": "forging a task record with Write is DENIED",
+      "command": "echo '{\"tool_name\":\"Write\",\"cwd\":\"/tmp/claude-1000/-home-excelsior-Desktop-stallion/339ea17b-541d-4652-8df5-1841c43957ed/scratchpad/probes/app\",\"tool_input\":{\"file_path\":\"/tmp/claude-1000/-home-excelsior-Desktop-stallion/339ea17b-541d-4652-8df5-1841c43957ed/scratchpad/probes/app/.tasks/forged.json\"}}' | node plugin/hooks/authoring-gate.mjs",
+      "exitCode": 2,
+      "evidence": "picasso authoring-gate: the edit targets .tasks/forged.json, a task record |   rule: task records are written by task-state only, never by an editor |   fix: cd '$S/app' && node tools/task-state.mjs status"
+    },
+    {
+      "name": "planting .git to hide a subtree is DENIED",
+      "command": "echo '{\"tool_name\":\"Write\",\"cwd\":\"/tmp/claude-1000/-home-excelsior-Desktop-stallion/339ea17b-541d-4652-8df5-1841c43957ed/scratchpad/probes/app\",\"tool_input\":{\"file_path\":\"/tmp/claude-1000/-home-excelsior-Desktop-stallion/339ea17b-541d-4652-8df5-1841c43957ed/scratchpad/probes/app/src/.git\"}}' | node plugin/hooks/authoring-gate.mjs",
+      "exitCode": 2,
+      "evidence": "picasso authoring-gate: the edit targets src/.git, git metadata inside a picasso-claimed repo |   rule: the edit tools never write .git here — a planted .git would hide a subtree from the gate |   fix: none for front-end work: git maintains .git itself"
+    },
+    {
+      "name": "a write through a dangling symlink is judged at its target (DENIED)",
+      "command": "echo '{\"tool_name\":\"Write\",\"cwd\":\"/tmp/claude-1000/-home-excelsior-Desktop-stallion/339ea17b-541d-4652-8df5-1841c43957ed/scratchpad/probes\",\"tool_input\":{\"file_path\":\"/tmp/claude-1000/-home-excelsior-Desktop-stallion/339ea17b-541d-4652-8df5-1841c43957ed/scratchpad/probes/out/dangling.tsx\"}}' | node plugin/hooks/authoring-gate.mjs",
+      "exitCode": 2,
+      "evidence": "picasso authoring-gate: the edit targets src/New.tsx, inside this repo's declared front-end jurisdiction, and no in-flight task covers it |   rule: front-end code lands only under a task advanced to executing (covering tasks found: none) |   fix: cd '$S/app' && node tools/task-state.mjs new edit-new --risk-class ui-runtime && node tools/task-state.mjs scope edit-new --add 'src/**' && node tools/task-state.mjs advance edit-new && node tools/task-state.mjs advance edit-new"
+    },
+    {
+      "name": "a harness that exits on import cannot wave the edit through (DENIED, stale output muted)",
+      "command": "echo '{\"tool_name\":\"Write\",\"cwd\":\"/tmp/claude-1000/-home-excelsior-Desktop-stallion/339ea17b-541d-4652-8df5-1841c43957ed/scratchpad/probes/old\",\"tool_input\":{\"file_path\":\"/tmp/claude-1000/-home-excelsior-Desktop-stallion/339ea17b-541d-4652-8df5-1841c43957ed/scratchpad/probes/old/src/App.tsx\"}}' | node plugin/hooks/authoring-gate.mjs",
+      "exitCode": 2,
+      "evidence": "picasso authoring-gate: cannot import the harness law at $S/old/tools/task-coverage.mjs: the harness called process.exit(1) on import |   rule: a claimed repo is judged by its own vendored harness; an unloadable harness refuses |   fix: cd '$S/old' && git checkout -- tools/task-coverage.mjs (or re-vendor tools/ from picasso)"
+    },
+    {
+      "name": "deny prints an exact fix",
+      "command": "echo '{\"tool_name\":\"Write\",\"cwd\":\"/tmp/claude-1000/-home-excelsior-Desktop-stallion/339ea17b-541d-4652-8df5-1841c43957ed/scratchpad/probes/app\",\"tool_input\":{\"file_path\":\"/tmp/claude-1000/-home-excelsior-Desktop-stallion/339ea17b-541d-4652-8df5-1841c43957ed/scratchpad/probes/app/src/NavBar.tsx\"}}' | node plugin/hooks/authoring-gate.mjs",
+      "exitCode": 2,
+      "evidence": "picasso authoring-gate: the edit targets src/NavBar.tsx, inside this repo's declared front-end jurisdiction, and no in-flight task covers it |   rule: front-end code lands only under a task advanced to executing (covering tasks found: none) |   fix: cd '$S/app' && node tools/task-state.mjs new edit-nav-bar --risk-class ui-runtime && node tools/task-state.mjs scope edit-nav-bar --add 'src/**' && node tools/task-state.mjs advance edit-nav-bar && node tools/task-state.mjs advance edit-nav-bar"
+    },
+    {
+      "name": "the printed fix, run as printed, succeeds",
+      "command": "cd '$S/app' && node tools/task-state.mjs new edit-nav-bar --risk-class ui-runtime && node tools/task-state.mjs scope edit-nav-bar --add 'src/**' && node tools/task-state.mjs advance edit-nav-bar && node tools/task-state.mjs advance edit-nav-bar",
+      "exitCode": 0,
+      "evidence": "task-state: edit-nav-bar opened at intake (risk-class ui-runtime) | task-state: edit-nav-bar scope + 'src/**' (1 declared) | task-state: edit-nav-bar → planned | task-state: edit-nav-bar → executing"
+    },
+    {
+      "name": "after the printed fix, the same edit is ALLOWED",
+      "command": "echo '{\"tool_name\":\"Write\",\"cwd\":\"/tmp/claude-1000/-home-excelsior-Desktop-stallion/339ea17b-541d-4652-8df5-1841c43957ed/scratchpad/probes/app\",\"tool_input\":{\"file_path\":\"/tmp/claude-1000/-home-excelsior-Desktop-stallion/339ea17b-541d-4652-8df5-1841c43957ed/scratchpad/probes/app/src/NavBar.tsx\"}}' | node plugin/hooks/authoring-gate.mjs",
+      "exitCode": 0,
+      "evidence": "(silent)"
+    }
+  ],
+  "reviews": [
+    "independent adversarial round 1: 21 probes, 11 BROKEN (planted .git, control-file forgery, dangling/.. symlinks, $ in fix lines, partial patch parse, process.exit on import, line breaks, cwd precedence, id≠filename) — all fixed, each pinned by a live self-test",
+    "independent adversarial round 2: every round-1 probe re-run holds; 5 narrower gaps (NBSP-indented markers, mnemonic/quoted git headers, control files via in-repo links, never-settling import, stale harness output) — all fixed, each pinned by a self-test"
+  ],
+  "open": [
+    "catastrophic-backtracking scope globs live in tools/task-coverage.mjs globToRegex — moved to the fence-core task",
+    "known ceilings (documented in plugin/README.md): shell writes are not gated; a claimed repo s own harness is imported; case-insensitive filesystems; ~ paths; a .tasks symlink that points outside the repo"
+  ]
+}

@@ -225,7 +225,7 @@
         "battery"
       ],
       "phase": "executing",
-      "checks": "the enforcement plugin's deny/allow matrix (jurisdiction, authorizing window, scope cover) discriminates"
+      "checks": "the enforcement plugin's decision matrix on the real vendored law, then the live hooks end to end (repo from the edited file, fail-closed once claimed, ApplyPatch targets, exact fix, banner imports nothing unclaimed)"
     }
   ]
 }
