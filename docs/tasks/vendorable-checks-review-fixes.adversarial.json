@@ -1,0 +1,335 @@
+{
+  "task": "vendorable-checks-review-fixes",
+  "at": "2026-09-28",
+  "lanes": "The findings came from an external six-lens review of picasso 615842b..496ea90 (input forgeability, silent correctness, dead wiring and doc claims, mock-vs-live seams, the self-replacing artifact, the repair itself), each finding verified by a second agent. This pass was run by the agent that wrote the fixes, not by an independent verifier. It reproduces each original repro end to end against the committed fix in a scratch workspace.",
+  "probes": [
+    {
+      "name": "R1 sanity: the forged judge really lies once its entry is a link (cold clone of the tampered host)",
+      "command": "(host: docs/gates/shadow/{console,a11y}-ratchet.mjs byte-identical copies + a forged shadow/ratchet.mjs; picasso/{console,a11y}-ratchet.mjs -> ../shadow/; commit; git clone) node docs/gates/picasso/console-ratchet.mjs --report r.json --baseline b.json  (r.json = one 'Uncaught TypeError: boom', b.json = [])",
+      "exitCode": 0,
+      "evidence": "'console-ratchet: clean against baseline (1 known)' — the attack is live; git records mode 120000 for both members and VENDOR.json is unchanged by the tamper"
+    },
+    {
+      "name": "R1: the bare drift gate (a battery row) refuses the linked members in the cold clone",
+      "command": "node docs/gates/picasso/checks-vendor.mjs",
+      "exitCode": 1,
+      "evidence": "refused: the vendored bundle in <clone>/docs/gates/picasso diverges from VENDOR.json (picasso d7f090a0dd): not a regular file: console-ratchet.mjs / not a regular file: a11y-ratchet.mjs / rule: ... a link is not a member (the same host before the fix: 'OK — 7 bundled file(s)')"
+    },
+    {
+      "name": "R1: the clone-run --freshness intake refuses the linked members",
+      "command": "node <pc>/tools/checks-vendor.mjs --freshness <pc> --bundle docs/gates/picasso",
+      "exitCode": 1,
+      "evidence": "refused: the bundle diverges from VENDOR.json: not a regular file: console-ratchet.mjs / not a regular file: a11y-ratchet.mjs (before the fix: 'FRESH — the pin is <pc>'s HEAD')"
+    },
+    {
+      "name": "R8: a member linked to a host file — drift refuses, and the printed --export fix refuses instead of writing through",
+      "command": "ln -sf ../../../tools/host-tool.mjs docs/gates/picasso/ratchet.mjs; node docs/gates/picasso/checks-vendor.mjs; node <pc>/tools/checks-vendor.mjs --export docs/gates/picasso; head -1 tools/host-tool.mjs",
+      "exitCode": 1,
+      "evidence": "drift: 'not a regular file: ratchet.mjs' (exit 1) | export: 'refused: ... holds bundle names that are not regular files (nothing was written — a write would land THROUGH them): ratchet.mjs / fix: remove them by hand' (exit 1) | tools/host-tool.mjs still reads 'host-owned tool'"
+    },
+    {
+      "name": "L18 (incidental): a member replaced by a directory — export refuses with a rule instead of an EISDIR crash; removing it by hand then re-exporting is clean",
+      "command": "mkdir docs/gates/picasso/size-budget.mjs (file moved away); node docs/gates/picasso/checks-vendor.mjs; node <pc>/tools/checks-vendor.mjs --export docs/gates/picasso; rmdir ...; re-export; drift",
+      "exitCode": 1,
+      "evidence": "drift 'not a regular file: size-budget.mjs' (exit 1) | export 'refused: ... not regular files ... size-budget.mjs' (exit 1, no stack trace) | after rmdir: export exit 0, drift 'OK — 7 bundled file(s)'"
+    },
+    {
+      "name": "R2: a patch laundered through a local-only picasso commit and a hand-written manifest, genuine checker",
+      "command": "printf '\\nprocess.exit(0);\\n' >> <pc>/tools/a11y-ratchet.mjs; git -C <pc> commit -qam local; copy into the bundle; VENDOR.json upstream=<local sha>, a11y digest=patched bytes; git -C <pc> pull --ff-only; node <pc>/tools/checks-vendor.mjs --freshness <pc> --bundle docs/gates/picasso",
+      "exitCode": 1,
+      "evidence": "branch -r --contains HEAD: [] ; pull exit 0 ('main...origin/main [ahead 1]'); bare drift 'OK' (exit 0, expected — L3) | freshness: 'refused: the pin 9fcb38f3e5 is on no remote-tracking ref of origin in <pc> — a commit only this clone holds launders a patch as well as a regenerated manifest does' (before the fix: FRESH, exit 0). The judging checker is identical to origin/main."
+    },
+    {
+      "name": "R2: a throwaway remote no longer satisfies --export's findability guard (nor --freshness)",
+      "command": "git -C <pc> remote add scratch <bare>; git -C <pc> push scratch HEAD:refs/heads/x; node <pc>/tools/checks-vendor.mjs --export docs/gates/picasso; node <pc>/tools/checks-vendor.mjs --freshness <pc> --bundle docs/gates/picasso",
+      "exitCode": 1,
+      "evidence": "branch -r --contains HEAD: scratch/x | export: 'refused: HEAD is on no remote-tracking ref of origin — --freshness could never find this pin (a throwaway remote does not count)' (exit 1) | freshness: same origin refusal (exit 1)"
+    },
+    {
+      "name": "R2 controls: clone back at origin/main reads FRESH; a detached CI-style checkout (origin/main only, no origin/HEAD, no upstream) reads FRESH; a clone with origin removed refuses",
+      "command": "node <pc>/tools/checks-vendor.mjs --freshness <pc> --bundle ...; (detached) node <detached>/tools/checks-vendor.mjs --freshness <detached> --bundle ...; (no origin) node <noorigin>/tools/checks-vendor.mjs --freshness <noorigin> --bundle ...",
+      "exitCode": 1,
+      "evidence": "pc: 'FRESH — the pin is <pc>'s HEAD (d7f090a0dd)' (exit 0) | detached: FRESH (exit 0) | noorigin: 'refused: the pin d7f090a0dd is on no remote-tracking ref of origin' (exit 1) — the F4 shape (no fetched tip at all) now refuses rather than reading FRESH"
+    },
+    {
+      "name": "R3: the same critical violation added to two more routes against a baseline from / (real sweep, ROOT_SELECTOR=body)",
+      "command": "BASE_URL=http://127.0.0.1:<port> ROUTES=\"/, /feed, /watch\" ROOT_SELECTOR=body REPORT_DIR=reports/ui node docs/gates/picasso/render-report.mjs; node docs/gates/picasso/a11y-ratchet.mjs --violations reports/ui/a11y-report.json --baseline docs/gates/a11y-baseline.json --render-failures reports/ui/render-failures.json --render-baseline docs/gates/render-baseline.json",
+      "exitCode": 1,
+      "evidence": "baseline written by the sweep: [{route:'/', rule:'image-alt', selector:'img', impact:'critical'}] (gate exit 0) | after adding the alt-less img to /feed and /watch: 'refused: 2 NEW accessibility violation(s) ... /feed|image-alt|img|critical / /watch|image-alt|img|critical' (before the fix: 'clean against baseline (3 known)', exit 0)"
+    },
+    {
+      "name": "R3: a page-level rule (selector html) on a newly swept route",
+      "command": "(baseline from ROUTES=\"/\" with no lang) ROUTES=\"/, /new\" sweep; a11y-ratchet",
+      "exitCode": 1,
+      "evidence": "baseline [{route:'/', rule:'html-has-lang', selector:'html', impact:'serious'}] | 'refused: 1 NEW accessibility violation(s) ... /new|html-has-lang|html|serious'"
+    },
+    {
+      "name": "R5: errors and a failing API call after load (default SETTLE_MS=2000)",
+      "command": "(/late: console.error('sync-err'); timers late-100/400/800/1500/3000; fetch('/api/me') at 600 ms -> 404) BASE_URL=... ROUTES=/late ROOT_SELECTOR=#root REPORT_DIR=reports/ui node docs/gates/picasso/render-report.mjs; node docs/gates/picasso/console-ratchet.mjs --report reports/ui/console-report.json --baseline docs/gates/console-baseline.json",
+      "exitCode": 1,
+      "evidence": "report: sync-err, late-100, late-400, 'HTTP 404: http://127.0.0.1:<port>/api/me', 'Failed to load resource ... 404', 'api /me failed 404', late-800, late-1500 — late-3000 is absent, the documented SETTLE_MS ceiling | console-ratchet exit 1 (before the fix: only sync-err and late-100; the late fetch left the report [] and the ratchet exit 0)"
+    },
+    {
+      "name": "R4 + R5: late-mounting SPA content and a dead app root, ROOT_SELECTOR=#root vs body",
+      "command": "(/spa mounts <button id=buy> at 300 ms; /dead keeps #root empty) for sel in '#root' body: sweep ROUTES=\"/spa, /dead\"; a11y-ratchet with --render-failures",
+      "exitCode": 1,
+      "evidence": "#root: '1 render failure(s)' and a11y-ratchet refuses '/spa|button-name|#buy|critical' (exit 1) | body: '0 render failure(s)' — the documented caveat, /dead is not a render failure under body — yet the late /spa button is still audited and refused (exit 1) because axe now runs after the settle window"
+    },
+    {
+      "name": "R6: a directory budget, and --tighten on a directory",
+      "command": "(dist/assets/app-abc.js = 500000 B) size-budget --budgets {dist, maxBytes 100000}; {dist/assets, 10000000} --tighten; add a 900000 B chunk; size-budget",
+      "exitCode": 1,
+      "evidence": "'dist: 500000B over budget 100000B (+400000B)' (exit 1; before: 'within budget', the inode's 4096) | --tighten wrote maxBytes 500000 (before: 4096) | then 'dist/assets: 1400000B over budget 500000B (+900000B)' (exit 1)"
+    },
+    {
+      "name": "R7: an empty budget list, a bare array, an empty object, and --tighten over nothing",
+      "command": "for body in '{\"budgets\":[]}' '[]' '{}': node docs/gates/picasso/size-budget.mjs --budgets docs/gates/size-budgets.json; then {\"budgets\":[]} with --tighten",
+      "exitCode": 1,
+      "evidence": "all three exit 1 with 'refused: docs/gates/size-budgets.json declares no budgets — a size gate over nothing is green by construction and can never fail / fix: declare { \"budgets\": [{ \"path\": \"dist/assets/*.js\", \"maxBytes\": <a generous cap> }] }, build, then --tighten' (before: '0 artifact(s) within budget' exit 0, or a TypeError stack trace)"
+    },
+    {
+      "name": "L2 (still open): a symlinked checker redirects the bare drift gate; the clone-run --freshness catches it",
+      "command": "cp -r bundle docs/gates/pristine; printf 'process.exit(0)' > a11y-ratchet.mjs; ln -sf ../pristine/checks-vendor.mjs checks-vendor.mjs; node docs/gates/picasso/checks-vendor.mjs; node <pc>/tools/checks-vendor.mjs --freshness <pc> --bundle docs/gates/picasso",
+      "exitCode": 1,
+      "evidence": "bare: 'OK — 7 bundled file(s)' (exit 0 — L2 reproduced, registered) | freshness: 'patched: a11y-ratchet.mjs / not a regular file: checks-vendor.mjs' (exit 1)"
+    },
+    {
+      "name": "fence: a staged file outside the task's declared scope (scratch picasso clone at d7f090a)",
+      "command": "echo 'export const x = 1;' > plugin/probe-x.mjs; git add plugin/probe-x.mjs; node tools/task-coverage.mjs --staged",
+      "exitCode": 1,
+      "evidence": "task-coverage: refused: staged code outside every in-flight task's declared scope: plugin/probe-x.mjs"
+    },
+    {
+      "name": "mutants: each fix line reverted alone (12 single-line mutants, plus one for L13)",
+      "command": "python3 mutants.py (apply one mutant, run that file's --self-test, restore)",
+      "exitCode": 1,
+      "evidence": "12/12 killed: M1 drift member lstat check, M2 VENDOR.json lstat check, M3 export link refusal, M4 export guard back to `branch -r`, M5 freshness origin guard, M6 onOrigin widened to refs/remotes/, M7 a11y key drops route, M8 render-report drops route, M9 settle wait removed, M10 directory branch removed, M11 empty list accepted, M12 non-array accepted — each named FAIL lines. L13 mutant (freshness drift check `if (false)`): killed by 'freshness (--bundle) refuses a symlinked member'."
+    },
+    {
+      "name": "cold-clone battery at d7f090a (no node_modules)",
+      "command": "git clone <bare of picasso> pc && cd pc && npm run selftest",
+      "exitCode": 0,
+      "evidence": "battery exit 0; 301 ok lines; 'vendor-sync: template/tools in sync; pin dd0fc81'; 'gate-registry: 29 gate(s), every declaration present in every transport'"
+    }
+  ],
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "HIGH",
+      "claim": "A symlinked bundle member got past the bare drift gate AND the clone-run --freshness intake while node ran the link target, whose ./ratchet.mjs no gate read: the ratchets reported a forged clean.",
+      "found_by": "external review (verified)",
+      "pin": "pin 1 (checks-vendor self-test: 'symlinked member' / 'replaced by a directory', 4 cases); probes R1 x3",
+      "outcome": "RESOLVED: every bundle name must be a regular file (lstat, never stat) in driftProblems, which --freshness reuses; a symlinked VENDOR.json refuses too. The bare gate walking a symlinked CHECKER's directory remains L2."
+    },
+    {
+      "id": "R2",
+      "severity": "MEDIUM",
+      "claim": "--freshness certified a pin that exists only in the intake clone (a local commit), and --export's findability guard accepted any remote, so a throwaway remote satisfied it.",
+      "found_by": "external review (verified)",
+      "pin": "pin 2 ('no origin ref' / 'non-origin remote', 2 cases); probes R2 x3",
+      "outcome": "RESOLVED: both guards require a refs/remotes/origin/* ref containing the pin (freshness) or HEAD (export). ponytail ceiling in code: a hand-forged origin ref is operator input, the same class as F4. Side effect: a clone with no origin refs at all now refuses (F4's shape), and WIRING's 'nothing to be behind' sentence is gone."
+    },
+    {
+      "id": "R3",
+      "severity": "MEDIUM (filed HIGH)",
+      "claim": "The a11y identity ignored the route: a violation matching a baselined rule|selector|impact on any other route passed, and page-level rules (selector html) always collided.",
+      "found_by": "external review (verified)",
+      "pin": "pin 4 (a11y-ratchet 'another route' + render-report 'carries its route'); probes R3 x2",
+      "outcome": "RESOLVED: render-report writes {route, rule, selector, impact}; keyOf prefixes the route when present, so route-less hand-built entries key as before. A host baseline written before this is route-less and must be re-baselined deliberately (none exists: picasso's are [], and the bundle is not yet vendored anywhere)."
+    },
+    {
+      "id": "R4",
+      "severity": "MEDIUM",
+      "claim": "WIRING part A's CI line prescribed ROOT_SELECTOR=body for every host, which disables the empty-root render-failure check (and skipped the settle poll).",
+      "found_by": "external review (verified)",
+      "pin": "pin 5 (WIRING grep: the body line is gone, the placeholder is present); probe R4+R5",
+      "outcome": "RESOLVED (docs): the part-A CI line takes ROOT_SELECTOR=<the app root, e.g. #root>, and a paragraph states what body gives up. Part B keeps body for Antitube (server-rendered) with a pointer to that paragraph. The axe-timing half is fixed in code by R5."
+    },
+    {
+      "id": "R5",
+      "severity": "MEDIUM",
+      "claim": "render-report recorded only a short window after load: a console error or failing API call a few hundred ms later was dropped, and axe audited before late content mounted.",
+      "found_by": "external review (verified)",
+      "pin": "pin 6 (render-report 'a second after load', 3 cases); probe R5, R4+R5",
+      "outcome": "RESOLVED with a marked ceiling: each route is held open SETTLE_MS (default 2000) before axe; listeners run until close. A failure later than the window is still not seen (late-3000 in the probe) — 'ponytail:' in code, documented in WIRING. The self-test seals SETTLE_MS in its child env."
+    },
+    {
+      "id": "R6",
+      "severity": "MEDIUM",
+      "claim": "size-budget measured a directory path by statSync().size (the inode, 4096), so a directory budget always passed and --tighten stored 4096.",
+      "found_by": "external review (verified)",
+      "pin": "pin 7 (size-budget 'directory budget', 2 cases); probe R6",
+      "outcome": "RESOLVED: a directory sums every file beneath it (recursive readdir; a dangling link is skipped, not a crash); a directory with no files is MISSING, like a zero-match glob."
+    },
+    {
+      "id": "R7",
+      "severity": "MEDIUM (filed twice)",
+      "claim": "An empty budget list passed as green-over-nothing, --tighten could not fill it, and [] / {} crashed with a TypeError; WIRING part A led hosts there.",
+      "found_by": "external review (verified)",
+      "pin": "pin 8 (size-budget 'not a green over nothing', 3 cases); probe R7",
+      "outcome": "RESOLVED: a missing, non-array or empty budgets list refuses with a rule and the shape; WIRING part A states the shape, that --tighten adds no entry, and adds a size cap to the canary probe. Also covers L7 (the docs half)."
+    },
+    {
+      "id": "R8",
+      "severity": "MEDIUM",
+      "claim": "--export (the drift gate's printed fix) wrote through a symlinked member to a host file outside the bundle, and both verdicts then certified the bundle clean.",
+      "found_by": "external review (verified)",
+      "pin": "pin 3 (checks-vendor 'written through a link'); probe R8",
+      "outcome": "RESOLVED: --export refuses any bundle name (VENDOR.json included) that is not a regular file before writing anything. Also resolves L18 (a directory at a member name crashed export with EISDIR)."
+    },
+    {
+      "id": "L1",
+      "severity": "LOW (filed MEDIUM)",
+      "claim": "The recency check stops at the first resolving tip (@{upstream}) and never consults origin/HEAD, so a clone on a pushed feature branch reads FRESH while origin/HEAD moved a bundled source.",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "OPEN — the rule is inherited from stallion's FETCHED_TIPS/refuseBehindFetched; the fix (check pin..origin/HEAD whenever it resolves) belongs in the shared law."
+    },
+    {
+      "id": "L2",
+      "severity": "LOW",
+      "claim": "A symlinked checks-vendor.mjs makes the bare drift gate judge the link target's directory; patched members pass bare.",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "OPEN — the clone-run --freshness refuses it (probe above: 'not a regular file: checks-vendor.mjs'). Fix direction: refuse when lstat(process.argv[1]) is a symlink."
+    },
+    {
+      "id": "L3",
+      "severity": "LOW",
+      "claim": "The only push/CI-path integrity row (bare drift) is forgeable by rewriting one sha256 in VENDOR.json; --freshness runs only at intake.",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "OPEN — acknowledged in the self-test; fix direction: a CI-runnable digests-vs-pin mode without the 'moved past the pin' clause."
+    },
+    {
+      "id": "L4",
+      "severity": "LOW",
+      "claim": "size-budget does not validate entries: a misspelled maxBytes compares size > undefined and passes.",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "OPEN"
+    },
+    {
+      "id": "L5",
+      "severity": "LOW",
+      "claim": "a11y-ratchet does not check its input shape: axe's own {id, impact, nodes} objects key to ||<impact> and merge.",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "OPEN — unchanged by R3: an axe object carries no route, rule or selector, so it still keys to '||<impact>' and merges"
+    },
+    {
+      "id": "L6",
+      "severity": "LOW (filed twice)",
+      "claim": "WIRING says the host needs only node besides playwright/axe (git only for --freshness), but the registered row checks-vendor --self-test needs git and crashes with a TypeError without it.",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "OPEN"
+    },
+    {
+      "id": "L7",
+      "severity": "LOW",
+      "claim": "WIRING part A's size-budgets.json setup leads to a crash or a green over nothing.",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "RESOLVED as the docs half of R7"
+    },
+    {
+      "id": "L8",
+      "severity": "LOW",
+      "claim": "lint-budget's printed seeding fix ignores PICASSO_LINT_BUDGET and writes ./lint-budget.json at the host root.",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "OPEN"
+    },
+    {
+      "id": "L9",
+      "severity": "LOW",
+      "claim": "vendorable-checks.adversarial.json probe #1 records exitCode 1 for a command that exits 0 (the pin's recordedExit copied into the wrong field).",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "OPEN — a settled task's record; not rewritten here"
+    },
+    {
+      "id": "L10",
+      "severity": "LOW",
+      "claim": "Printed 'fix:' lines interpolate absolute paths unquoted; on a spaced path they fail when pasted.",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "OPEN — plugin/lib/gate-law.mjs has an `sh` quoting helper the checker does not use; the new R2 fix lines inherit the class"
+    },
+    {
+      "id": "L11",
+      "severity": "LOW",
+      "claim": "render-report's self-test inherits the host's ROOT_SELECTOR (a job-level env turns it red).",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "OPEN — this pass sealed only its own new SETTLE_MS"
+    },
+    {
+      "id": "L12",
+      "severity": "LOW",
+      "claim": "WIRING never says playwright must resolve from the host's ROOT node_modules; a pnpm monorepo with front-end devDeps in apps/web cannot run render-report.",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "OPEN"
+    },
+    {
+      "id": "L13",
+      "severity": "LOW",
+      "claim": "No self-test pinned freshness's own drift check.",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "RESOLVED incidentally — the new 'freshness (--bundle) refuses a symlinked member' case kills the `if (false)` mutant of that line"
+    },
+    {
+      "id": "L14",
+      "severity": "LOW",
+      "claim": "The F2 comment-blanking regex needs whitespace before '//': 'judge,// it's' still hides a multi-line import.",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "OPEN"
+    },
+    {
+      "id": "L15",
+      "severity": "LOW",
+      "claim": "--export into <existing file>/sub still crashes with ENOTDIR (F3 guards only a file target).",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "OPEN"
+    },
+    {
+      "id": "L16",
+      "severity": "LOW (filed MEDIUM)",
+      "claim": "A stale clone whose BUNDLE differs from the host manifest reports 'malformed' before the ancestry check, and its printed --export downgrades the host; --export never compares the existing pin.",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "OPEN — the documented pull-first intake refuses both forms"
+    },
+    {
+      "id": "L17",
+      "severity": "LOW",
+      "claim": "When upstream removes or renames a member, --export refuses the old member as a leftover although the host's VENDOR.json names it as a previous member.",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "OPEN"
+    },
+    {
+      "id": "L18",
+      "severity": "LOW",
+      "claim": "A member replaced by a directory crashed the recommended --export with EISDIR.",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "RESOLVED incidentally by R8's non-regular refusal (probe above)"
+    },
+    {
+      "id": "L19",
+      "severity": "LOW",
+      "claim": "After a picasso history rewrite, --freshness prints 'git pull --ff-only' as the fix for a diverged pin, which never helps.",
+      "found_by": "external review (verified LOW; registered, not fixed, per the task's charter)",
+      "outcome": "OPEN"
+    },
+    {
+      "id": "N1",
+      "severity": "LOW",
+      "claim": "tools/ratchet.mjs:18 (and template/tools/ratchet.mjs) still names the a11y identity as rule|selector|impact in a comment.",
+      "found_by": "this pass",
+      "outcome": "OPEN — outside this task's declared scope (scope is frozen after planned); the next task that touches ratchet.mjs owes it"
+    },
+    {
+      "id": "N2",
+      "severity": "LOW",
+      "claim": "`node tools/task-state.mjs status` crashes (TypeError: padEnd of undefined) and `metrics` over-counts, because .tasks/ holds two *.adversarial.json files (pin-retire-feature, template-resync-pin-retire) that listTasks parses as task records.",
+      "found_by": "this pass",
+      "outcome": "OPEN — pre-existing, outside scope"
+    },
+    {
+      "id": "N3",
+      "severity": "LOW",
+      "claim": "For a non-regular member, the drift gate's fix names --export, which then refuses and says to remove the entry by hand: a two-step repair, each step naming its own fix.",
+      "found_by": "this pass",
+      "outcome": "OPEN"
+    }
+  ]
+}
