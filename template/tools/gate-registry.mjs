@@ -23,6 +23,7 @@
  */
 
 import { existsSync, readFileSync, mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -79,6 +80,8 @@ export function carries(tr, text, invocation, declared = new Set([invocation])) 
   }
   return text.includes(invocation);
 }
+
+function die(message) { console.error(`gate-registry: ${message}`); process.exit(1); }
 
 // `&` and `|` are excluded from the match so chain operators terminate it.
 const INVOCATION_RE = /node (?:\.\/)?(?:tools|plugin)\/[a-z/-]+\.mjs[^"'`\n&|]*/g;
@@ -194,6 +197,19 @@ function selfTest() {
       files["package.json"] = JSON.stringify({ scripts: { selftest: "node tools/task-state.mjs --self-test", other: "node tools/task-state.mjs metrics" } });
     }, r => r.problems.some(p => p.includes("task-state-metrics"))],
   ];
+  // The CLI's own refusal path: a drifted registry prints the rule and the fix,
+  // it does not crash on the way out.
+  {
+    const root = mkdtempSync(join(tmpdir(), "picasso-reg-cli-"));
+    mkdirSync(join(root, "tools"), { recursive: true });
+    mkdirSync(join(root, "docs/gates"), { recursive: true });
+    writeFileSync(join(root, "tools/gate-registry.mjs"), readFileSync(fileURLToPath(import.meta.url), "utf8"));
+    writeFileSync(join(root, "docs/gates/gate-registry.json"), JSON.stringify({ gates: [{ id: "gone", invocation: "node tools/x.mjs", transports: ["pre-commit"] }] }));
+    const r = spawnSync(process.execPath, [join(root, "tools/gate-registry.mjs")], { encoding: "utf8" });
+    ok("the CLI refuses a drifted registry with its message, not a crash",
+      r.status === 1 && /^gate-registry: /.test(r.stderr) && !/Error/.test(r.stderr));
+    rmSync(root, { recursive: true, force: true });
+  }
   for (const [name, mutate, verdict] of cases) {
     const b = build(mutate);
     ok(name, verdict(b.result));

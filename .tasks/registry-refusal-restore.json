@@ -1,0 +1,42 @@
+{
+  "id": "registry-refusal-restore",
+  "phase": "adversarial",
+  "riskClass": "tooling",
+  "scope": [
+    "tools",
+    "template/tools",
+    ".tasks",
+    "docs/tasks"
+  ],
+  "pins": [
+    {
+      "command": "node tools/gate-registry.mjs --self-test",
+      "recordedExit": 1,
+      "evidence": "  ok a CI job with a custom shell carries nothing\n  ok 'node ./tools/…' is seen by the shadow sweep\n  ok the battery is the selftest script, not any script in package.json\ngate-registry: 1 self-test failure(s)",
+      "at": "2026-09-27T12:37:47.109Z"
+    }
+  ],
+  "created": "2026-09-27T12:37:46.770Z",
+  "history": [
+    {
+      "at": "2026-09-27T12:37:46.770Z",
+      "to": "intake"
+    },
+    {
+      "at": "2026-09-27T12:37:46.904Z",
+      "to": "planned"
+    },
+    {
+      "at": "2026-09-27T12:37:46.928Z",
+      "to": "executing"
+    },
+    {
+      "at": "2026-09-27T12:38:33.318Z",
+      "to": "verified"
+    },
+    {
+      "at": "2026-09-27T12:38:43.746Z",
+      "to": "adversarial"
+    }
+  ]
+}

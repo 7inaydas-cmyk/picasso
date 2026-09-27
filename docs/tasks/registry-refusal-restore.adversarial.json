@@ -1,0 +1,33 @@
+{
+  "task": "registry-refusal-restore",
+  "at": "2026-09-27",
+  "probes": [
+    {
+      "name": "a drifted template CI (the render:selftest line missing) is REFUSED with the rule and an exact fix, not a crash",
+      "command": "cd template && git show HEAD:template/.github/workflows/selftest.yml > .github/workflows/selftest.yml && node tools/gate-registry.mjs",
+      "exitCode": 1,
+      "evidence": "gate-registry: gate 'render-selftest-ci' is missing from transport 'ci' (.github/workflows/selftest.yml) — no carrier of the strict shape runs it … fix: restore the line 'npm run render:selftest'"
+    },
+    {
+      "name": "before the fix the same drift crashed on the way out (fail-closed, message lost)",
+      "command": "same, at 10b773d's gate-registry.mjs",
+      "exitCode": 1,
+      "evidence": "ReferenceError: die is not defined at gate-registry.mjs:210"
+    },
+    {
+      "name": "the CLI refusal path is now pinned by the self-test (a copied tool in a temp root with a drifted registry)",
+      "command": "node tools/gate-registry.mjs --self-test",
+      "exitCode": 0,
+      "evidence": "ok the CLI refuses a drifted registry with its message, not a crash"
+    },
+    {
+      "name": "the wired repo still reads green",
+      "command": "node tools/gate-registry.mjs && (cd template && node tools/gate-registry.mjs)",
+      "exitCode": 0,
+      "evidence": "gate-registry: 27 gate(s), every declaration present in every transport (both)"
+    }
+  ],
+  "open": [
+    "red-check has no --expect: a pin can fail for the wrong reason (this very bug made another task's pin 'fail' by crashing) — the lifecycle-honesty task ports stallion's --expect"
+  ]
+}
