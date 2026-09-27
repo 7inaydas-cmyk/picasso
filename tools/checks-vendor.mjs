@@ -17,9 +17,12 @@
  *                                          the manifest's files, byte for byte
  *   checks-vendor.mjs --export <dir>       (picasso checkout) HEAD's bundle bytes,
  *                                          read from git's object database, + VENDOR.json
- *   checks-vendor.mjs --freshness <clone>  (host copy, wave intake) the manifest's
- *                                          digests are picasso's bytes at the pin, and
- *                                          no bundled source moved since
+ *   checks-vendor.mjs --freshness <clone> [--bundle <dir>]
+ *                                          (wave intake) the manifest's digests are
+ *                                          picasso's bytes at the pin, and no bundled
+ *                                          source moved since; run it from the clone's
+ *                                          own checker with --bundle, so the copy being
+ *                                          judged is never the judge
  *   checks-vendor.mjs --probe              (picasso battery) export this working tree
  *                                          into a host-shaped temp dir (a spaced path)
  *                                          and prove it standalone there
@@ -27,7 +30,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -136,7 +139,13 @@ const FROM_RE = /\b(?:import|export)\b[^;'"`]*?\bfrom\s*(["'])([^"']*)\1/g;
 const SIDE_EFFECT_RE = /\bimport\s*(["'])([^"']*)\1/g;
 const DYNAMIC_RE = /\bimport\s*\(([^)]*)\)/g;
 const allowed = s => s.startsWith("node:") || PACKAGES.includes(s) || (s.startsWith("./") && Object.hasOwn(BUNDLE, s.slice(2)));
-function importProblems(name, text) {
+// Line comments go first, so a quote in one cannot hide a multi-line import clause.
+// ponytail: only a '//' with no quote before it on its line is blanked, and /* */ stays —
+// a quote inside a block comment in an import clause still hides it; a real lexer
+// (es-module-lexer) if the bundle grows past picasso's own files.
+const blankLineComments = text => text.replace(/^([^'"`\n]*?)(?<!\S)\/\/.*$/gm, "$1");
+function importProblems(name, source) {
+  const text = blankLineComments(source);
   const statics = [...text.matchAll(FROM_RE), ...text.matchAll(SIDE_EFFECT_RE)].map(m => m[2]);
   const problems = statics.filter(s => !allowed(s)).map(s => `${name}: imports '${s}'`);
   for (const m of text.matchAll(DYNAMIC_RE)) {
@@ -161,6 +170,8 @@ function cmdDrift() {
 function cmdExport(target) {
   if (!target) die("usage: checks-vendor.mjs --export <dir>");
   const dir = resolve(target);
+  if (existsSync(dir) && !statSync(dir).isDirectory())
+    die(`refused: --export needs a directory; ${dir} is a file (nothing was written)`, "name the bundle directory, e.g. --export docs/gates/picasso");
   const top = git(ROOT, ["rev-parse", "--show-toplevel"]);
   if (top.code !== 0 || realpath(top.out.trim()) !== realpath(ROOT))
     die(`refused: --export runs from a picasso checkout — ${ROOT} is not a git toplevel (a vendored copy cannot re-export itself)`,
@@ -186,18 +197,21 @@ function cmdExport(target) {
   if (problems.length) die(`refused: the export does not verify:\n  ${problems.join("\n  ")}`);
   console.log(`checks-vendor: exported ${Object.keys(BUNDLE).length} file(s) + ${MANIFEST} into ${dir} at picasso ${sha10(head)}\n` +
     `  drift gate:  node ${join(dir, "checks-vendor.mjs")}\n` +
-    `  wave intake: node ${join(dir, "checks-vendor.mjs")} --freshness <picasso-clone>\n` +
+    `  wave intake: node <picasso-clone>/tools/checks-vendor.mjs --freshness <picasso-clone> --bundle ${dir}\n` +
     `  wiring:      picasso docs/WIRING.md, "Picasso's checks in a repo picasso does not govern"`);
 }
 
-function cmdFreshness(target) {
-  if (!target) die("usage: checks-vendor.mjs --freshness <picasso-clone>");
+function cmdFreshness(target, bundle) {
+  if (!target || bundle === "") die("usage: checks-vendor.mjs --freshness <picasso-clone> [--bundle <vendored-dir>]");
   const clone = resolve(target);
-  const reVendor = `node ${join(clone, "tools/checks-vendor.mjs")} --export ${HERE}`;
-  const { manifest, refusal } = loadManifest(HERE);
+  // Default: the bundle this checker lives in. A host copy cannot certify its own
+  // checker, so wave intake runs picasso's copy with --bundle <host dir>.
+  const dir = bundle ? resolve(bundle) : HERE;
+  const reVendor = `node ${join(clone, "tools/checks-vendor.mjs")} --export ${dir}`;
+  const { manifest, refusal } = loadManifest(dir);
   if (refusal) die(`refused: ${refusal}`, reVendor);
-  const drift = driftProblems(HERE, manifest);
-  if (drift.length) die(`refused: the bundle diverges from ${MANIFEST}:\n  ${drift.join("\n  ")}`, `node ${SELF}   (the drift gate), then re-vendor`);
+  const drift = driftProblems(dir, manifest);
+  if (drift.length) die(`refused: the bundle diverges from ${MANIFEST}:\n  ${drift.join("\n  ")}`, `node ${join(dir, "checks-vendor.mjs")}   (the drift gate), then re-vendor`);
   const pin = manifest.upstream;
   const g = (args, enc) => git(clone, args, enc);
   if (g(["rev-parse", "--show-toplevel"]).code !== 0) die(`refused: ${clone} is not a git clone of picasso`, "point --freshness at a picasso clone");
@@ -329,6 +343,8 @@ function lawCases(ok, tmp) {
   ok("imports: an undeclared package refuses", scan(`${IMP} x from "lodash";`).length === 1);
   ok("imports: a re-export from outside refuses", scan(`${EXP} * from "../lib/x.mjs";`).length === 1);
   ok("imports: a multi-line named form is still seen", scan(`${IMP} {\n  a,\n  b,\n} from "./gone.mjs";`).length === 1);
+  ok("imports: a multi-line clause carrying a comment with a quote is still seen",
+    scan(`${IMP} {\n  a, // it's the shared one\n} from "../tools/ratchet.mjs";`).length === 1);
   ok("imports: a literal dynamic specifier is judged", scan(`await ${IMP}("./gone.mjs");`).length === 1 && scan(`await ${IMP}("node:fs");`).length === 0);
   ok("imports: a computed dynamic specifier refuses", scan(`await ${IMP}(name);`).length === 1);
   ok("imports: the meta property is not a module", scan(`const u = ${IMP}.meta.url;`).length === 0);
@@ -375,6 +391,9 @@ function gitCases(ok, tmp) {
   r = run(join(nested, "checks-vendor.mjs"), ["--export", host]);
   ok("export refuses a ROOT that is not the git toplevel (a copy cannot re-export)", r.code === 1 && r.out.includes("not a git toplevel") && !existsSync(host));
   rmSync(join(up, "nested"), { recursive: true });
+  writeFileSync(join(tmp, "a-file"), "x");
+  r = run(upChecker, ["--export", join(tmp, "a-file")]);
+  ok("export into an existing file refuses with a rule, not a crash", r.code === 1 && r.out.includes("needs a directory"));
 
   mkdirSync(host, { recursive: true }); writeFileSync(join(host, "old-gate.mjs"), "x");
   r = exp();
@@ -405,6 +424,19 @@ function gitCases(ok, tmp) {
   r = fresh(up);
   ok("freshness refuses a regenerated manifest over a patch", run(hostChecker, []).code === 0 && r.code === 1 && r.out.includes("patched against upstream"));
   writeFileSync(join(host, "a11y-ratchet.mjs"), "// tools/a11y-ratchet.mjs v1\n");
+  writeFileSync(join(host, MANIFEST), JSON.stringify(manifest));
+
+  // The judge must not be the judged: a neutered host checker under a regenerated
+  // manifest passes its own --freshness; picasso's checker (--bundle) refuses it.
+  const hostCheckerBytes = readFileSync(hostChecker);
+  writeFileSync(hostChecker, `console.log("checks-vendor: FRESH");\n`);
+  const neutered = structuredClone(manifest);
+  neutered.files["checks-vendor.mjs"].sha256 = sha256(readFileSync(hostChecker));
+  writeFileSync(join(host, MANIFEST), JSON.stringify(neutered));
+  r = run(upChecker, ["--freshness", up, "--bundle", host]);
+  ok("freshness run by picasso's own checker (--bundle) refuses a neutered host checker under a regenerated manifest",
+    fresh(up).code === 0 && r.code === 1 && /upstream [0-9a-f]{10}: checks-vendor\.mjs/.test(r.out));
+  writeFileSync(hostChecker, hostCheckerBytes);
   writeFileSync(join(host, MANIFEST), JSON.stringify(manifest));
 
   r = fresh(up);
@@ -449,6 +481,6 @@ const flag = f => { const i = args.indexOf(f); return i < 0 ? undefined : args[i
 if (args.includes("--self-test")) selfTest();
 else if (args.includes("--probe")) cmdProbe();
 else if (flag("--export") !== undefined) cmdExport(flag("--export"));
-else if (flag("--freshness") !== undefined) cmdFreshness(flag("--freshness"));
+else if (flag("--freshness") !== undefined) cmdFreshness(flag("--freshness"), flag("--bundle"));
 else if (args.length === 0) cmdDrift();
-else die("usage: checks-vendor.mjs [--export <dir> | --freshness <picasso-clone> | --probe | --self-test]");
+else die("usage: checks-vendor.mjs [--export <dir> | --freshness <picasso-clone> [--bundle <dir>] | --probe | --self-test]");

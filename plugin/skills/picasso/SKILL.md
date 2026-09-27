@@ -36,7 +36,8 @@ fences refuse violations with the rule, the evidence, and an exact fix command.
      lifecycle; never add `picasso.json`. Re-vendoring is
      `node <picasso>/tools/checks-vendor.mjs --export <bundle-dir>` (a host task);
      at each wave's intake run
-     `node <bundle-dir>/checks-vendor.mjs --freshness <picasso-clone>`.
+     `node <picasso-clone>/tools/checks-vendor.mjs --freshness <picasso-clone> --bundle <bundle-dir>`
+     (picasso's own checker judges the host copy — never the copy itself).
    - **2b — no bundle** (Antitube today): run the checks from a picasso checkout —
      see the next section.
 3. **Neither**: picasso makes no claim; work freely, or adopt picasso

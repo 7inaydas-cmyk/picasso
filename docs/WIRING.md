@@ -100,12 +100,15 @@ need no task at all.
 - **Drift gate** (host battery): `node docs/gates/picasso/checks-vendor.mjs`,
   from any cwd — refuses a missing or malformed manifest, an undeclared file, a
   deleted file or a patched one, and names the re-vendor command.
-- **Freshness** (each wave's intake):
-  `node docs/gates/picasso/checks-vendor.mjs --freshness <picasso-clone>` —
+- **Freshness** (each wave's intake), run by the picasso CLONE's checker so the
+  copy being judged is never the judge (a host copy cannot certify its own
+  checker), after pulling that clone:
+  `node <picasso-clone>/tools/checks-vendor.mjs --freshness <picasso-clone> --bundle docs/gates/picasso` —
   refuses when the manifest's digests are not picasso's bytes at its own pin
-  (`patched against upstream`: a hand patch under a regenerated manifest), when
-  picasso moved a bundled source past the pin, or when the clone is behind the
-  pin or behind its own fetched upstream.
+  (`patched against upstream`: a hand patch under a regenerated manifest, the
+  checker included), when picasso moved a bundled source past the pin, or when
+  the clone is behind the pin or behind its own fetched upstream. A clone with
+  no fetched upstream at all has nothing to be behind — pull it first.
 - **Host dependencies**: `playwright` pinned exactly (picasso pins `1.63.0`) and
   `@axe-core/playwright`; chromium via
   `npx playwright install chromium --with-deps`. Everything else runs on node

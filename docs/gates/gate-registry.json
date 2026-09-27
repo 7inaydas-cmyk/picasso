@@ -233,7 +233,7 @@
         "battery"
       ],
       "phase": "executing",
-      "checks": "the checks bundle's drift/freshness law discriminates: undeclared, patched, deleted, missing manifest, atomic shape, export refusals (non-toplevel, unpushed, leftover before any write), moved or renamed source, a manifest regenerated over a patch, imports outside the bundle"
+      "checks": "the checks bundle's drift/freshness law discriminates: undeclared, patched, deleted, missing manifest, atomic shape, export refusals (non-toplevel, unpushed, leftover before any write), moved or renamed source, a manifest regenerated over a patch, a neutered host checker judged by picasso's own copy (--bundle), export into a file, imports outside the bundle (a quote in a line comment included)"
     },
     {
       "id": "checks-vendor-probe",
